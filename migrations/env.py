@@ -5,7 +5,7 @@ from decouple import config as config_decouple
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
-from api.app import SQLModel
+from api.db.models import SQLModel
 
 from alembic import context
 
@@ -16,6 +16,7 @@ config = context.config
 
 DB_URL = config_decouple('DB_URL')
 config.set_main_option('sqlalchemy.url', DB_URL)
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
