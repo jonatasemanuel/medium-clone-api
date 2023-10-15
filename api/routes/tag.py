@@ -1,18 +1,19 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlmodel import Session
+from sqlalchemy.orm import Session
 
 from api.db.database import get_session
 from api.db.models import Tag
+from api.db.schemas import TagSchema
 
 
 Session = Annotated[Session, Depends(get_session)]
 
-router = APIRouter(prefix='/tag', tags=['tags'])
+router = APIRouter(prefix='/api/tag', tags=['tags'])
 
 
-@router.post('/', response_model=Tag)
-def create_tag(tag: Tag, session: Session):
+@router.post('/', response_model=TagSchema, status_code=201)
+def create_tag(tag: TagSchema, session: Session):
 
     db_tag = Tag(
         slug=tag.slug
@@ -21,3 +22,5 @@ def create_tag(tag: Tag, session: Session):
     session.add(db_tag)
     session.commit()
     session.refresh(db_tag)
+
+    return db_tag

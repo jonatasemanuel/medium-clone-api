@@ -1,49 +1,58 @@
-from datetime import datetime
-from fastapi import FastAPI
+from typing import List, Optional
 
-from typing import Optional
-
-from sqlmodel import SQLModel, Field, create_engine, Relationship
-# Session
-# from pydantic import ConfigDict, EmailStr, root_validator
+from sqlalchemy import ForeignKey, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
+class Base(DeclarativeBase):
+    pass
 
 
-"""class Article(SQLModel, table=True):
-    slug: Optional[str] = Field(default=None, primary_key=True)
+class User(Base):
+    __tablename__ = "users"
 
-    title: str
-    description: str
-    body: str
-    tag_list: Optional[list['Tag']] = Relationship(back_populates='tags')
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-    # author: int = Field(foreign_key='user.id')
+    id: Mapped[Optional[int]] = mapped_column(default=None, primary_key=True)
+    username: Mapped[str]
+    email: Mapped[str]
+    password: Mapped[str]
+    bio: Mapped[Optional[str]]
+    image: Mapped[Optional[str]]
+    articles: Mapped[list['Article']] = relationship(
+        back_populates='user', cascade='all, delete-orphan')
+    # following_id: Optional[list['Following']] = Field(foreign_key='user.id')
+
+
+class Article(Base):
+    __tablename__ = "articles"
+
+    slug: Mapped[str] = mapped_column(primary_key=True)
+    title: Mapped[str]
+    description: Mapped[str]
+    body: Mapped[str]
+
+    # tag_slug: Mapped[Optional[str]] = mapped_column(ForeignKey("tags.slug"))
+    # tag: Mapped["Tag"] = relationship(back_populates='articles')
+
+    # created_at: Mapped[DateTime] = mapped_column(server_default=func.now())
+    # updated_at: Mapped[DateTime] = mapped_column(onupdate=func.now())
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     # favorited_users_id: Optional[list] = None
-    # user: Optional[list['User']] = Relationship(back_populates='articles')
-"""
+    user: Mapped[User] = relationship(back_populates='articles')
 
-class Tag(SQLModel, table=True):
-    slug: str = Field(default=None, primary_key=True)
 
-    # article: Optional[list['Article']] = Relationship(
-    #    back_populates='articles')
+class Tag(Base):
+    __tablename__ = "tags"
+
+    slug: Mapped[str] = mapped_column(primary_key=True)
+
+    # article_slug: Mapped[Optional[str]] = mapped_column(
+    #   ForeignKey("articles.slug"))
+    # articles: Mapped[List["Article"]] = relationship(back_populates="tag")
+
 
 """
 class Following(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
     user_id: int = Field(foreign_key='user.id')
-
-class User(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    username: str
-    email: str
-    password: str
-    bio: Optional[str] = None
-    image: Optional[str] = None
-
-    articles: Optional[list['Article']] = Relationship(back_populates='user')
-    following_id: Optional[list['Following']] = Field(foreign_key='user.id')
 """
