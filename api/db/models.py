@@ -19,7 +19,7 @@ class User(Base):
     image: Mapped[Optional[str]]
     articles: Mapped[list['Article']] = relationship(
         back_populates='user', cascade='all, delete-orphan')
-    # following_id: Optional[list['Following']] = Field(foreign_key='user.id')
+    # following_id: Mapped[Optional[list['Following']] = mapped_column(ForeignKey('user.id'))
 
 
 class Article(Base):
