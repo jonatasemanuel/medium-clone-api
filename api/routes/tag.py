@@ -1,3 +1,4 @@
+"""
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -24,3 +25,4 @@ def create_tag(tag: TagSchema, session: Session):
     session.refresh(db_tag)
 
     return db_tag
+"""

@@ -1,7 +1,5 @@
 from logging.config import fileConfig
 
-from decouple import config as config_decouple
-
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
@@ -9,13 +7,13 @@ from api.db.models import Base
 
 from alembic import context
 
+from api.settings import Settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-DB_URL = config_decouple('DB_URL')
-config.set_main_option('sqlalchemy.url', DB_URL)
+config.set_main_option('sqlalchemy.url', Settings().DB_URL)
 
 # Interpret the config file
 target_metadata = Base.metadata

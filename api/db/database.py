@@ -1,11 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from decouple import config
+from api.settings import Settings
 
-
-DB_URL = config('DB_URL')
-engine = create_engine(DB_URL)
+engine = create_engine(Settings().DB_URL)
 
 
 def get_session():

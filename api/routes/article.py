@@ -1,3 +1,4 @@
+"""
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -29,3 +30,4 @@ def create_article(
     session.refresh(db_article)
 
     return db_article
+"""

@@ -17,11 +17,12 @@ class User(Base):
     password: Mapped[str]
     bio: Mapped[Optional[str]]
     image: Mapped[Optional[str]]
-    articles: Mapped[list['Article']] = relationship(
-        back_populates='user', cascade='all, delete-orphan')
+    # articles: Mapped[list['Article']] = relationship(
+      #  back_populates='user', cascade='all, delete-orphan')
     # following_id: Mapped[Optional[list['Following']] = mapped_column(ForeignKey('user.id'))
 
 
+"""
 class Article(Base):
     __tablename__ = "articles"
 
@@ -50,7 +51,6 @@ class Tag(Base):
     # articles: Mapped[List["Article"]] = relationship(back_populates="tag")
 
 
-"""
 class Following(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
 
