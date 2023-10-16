@@ -28,9 +28,10 @@ def create_user(user: UserSchema, session: Session):
 
     hashed_password = get_password_hash(user.password)
 
-
     db_user = User(
         username=user.username,
+        bio=user.bio,
+        image=user.image,
         password=hashed_password,
         email=user.email
     )
@@ -41,15 +42,19 @@ def create_user(user: UserSchema, session: Session):
 
     return db_user
 
-@router.get('/user/{user_id}', response_model=UserSchema, status_code=200)
+
+@router.get('/user/{user_id}', response_model=UserPublic, status_code=200)
 def get_profile(id: int, session: Session):
-    user = session.scalar(select(User).where(User.user_id == id))
-    return {'user': user}
-    
+    user = session.scalar(select(User).where(User.id == id))
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail='User not found'
+        )
+    return user
 
 
 @router.get('/list', response_model=UserList, status_code=200)
 def read_user(session: Session, skip: int = 0, limit: int = 100):
     users = session.scalars(select(User).offset(skip).limit(limit)).all()
     return {'users': users}
-    
