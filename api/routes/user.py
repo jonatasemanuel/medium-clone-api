@@ -9,6 +9,7 @@ from api.db.models import User
 from api.db.schemas import UserSchema, Message, UserPublic, UserList
 from api.security import get_current_user, get_password_hash
 
+
 router = APIRouter(prefix='/api', tags=['users'])
 Session = Annotated[Session, Depends(get_session)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
@@ -29,7 +30,7 @@ def create_user(user: UserSchema, session: Session):
     hashed_password = get_password_hash(user.password)
 
     db_user = User(
-        username=user.username,
+        username=user.username.lower(),
         bio=user.bio,
         image=user.image,
         password=hashed_password,
@@ -43,9 +44,9 @@ def create_user(user: UserSchema, session: Session):
     return db_user
 
 
-@router.get('/user/{user_id}', response_model=UserPublic, status_code=200)
-def get_profile(id: int, session: Session):
-    user = session.scalar(select(User).where(User.id == id))
+@router.get('/profiles/{username}', response_model=UserPublic, status_code=200)
+def get_profile(username: str, session: Session):
+    user = session.scalar(select(User).where(User.username == username))
     if not user:
         raise HTTPException(
             status_code=404,
