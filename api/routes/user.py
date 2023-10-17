@@ -53,6 +53,7 @@ def get_user(
     To do:
 
     [ ] - Switch response model to authentication scheme
+    [ ] - Remove id parameter, use just current user
     """
 
     if current_user.id != user_id:
@@ -85,6 +86,11 @@ def update_user(
     session: Session,
     current_user: CurrentUser,
 ):
+    """
+    Atualizar para patch e  mudar Schema -> não utilizar id de busca
+    Não precisa confirmar usuario pois esta confirmando no current_user?
+    """
+
     if current_user.id != user_id:
         raise HTTPException(status_code=400, detail='Not enough permissions')
 
