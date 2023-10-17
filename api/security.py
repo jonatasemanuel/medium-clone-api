@@ -1,4 +1,4 @@
-from datetime import timedelta, datetime 
+from datetime import timedelta, datetime
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -15,15 +15,13 @@ from api.settings import Settings
 
 settings = Settings()
 
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(
-        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-    to_encode.update({'exp': expire})
+    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
         to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
     )
@@ -38,7 +36,7 @@ def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 async def get_current_user(
@@ -47,24 +45,22 @@ async def get_current_user(
 ):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail='Could not validate credentials',
-        headers={'WWW-Authenticate': 'Bearer'},
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
     )
 
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
-        username: str = payload.get('sub')
+        username: str = payload.get("sub")
         if not username:
             raise credentials_exception
         token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
 
-    user = session.scalar(
-        select(User).where(User.email == token_data.username)
-    )
+    user = session.scalar(select(User).where(User.email == token_data.username))
 
     if user is None:
         raise credentials_exception

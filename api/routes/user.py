@@ -11,22 +11,17 @@ from api.db.schemas import UserPrivate, UserSchema, Message, UserPublic, UserLis
 from api.security import get_current_user, get_password_hash
 
 
-router = APIRouter(prefix='/api', tags=['users'])
+router = APIRouter(prefix="/api", tags=["users"])
 Session = Annotated[Session, Depends(get_session)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
-@router.post('/users', response_model=UserPublic, status_code=201)
+@router.post("/users", response_model=UserPublic, status_code=201)
 def create_user(user: UserSchema, session: Session):
-    db_user = session.scalar(
-        select(User).where(User.username == user.username)
-    )
+    db_user = session.scalar(select(User).where(User.username == user.username))
 
     if db_user:
-        raise HTTPException(
-            status_code=400,
-            detail='Username already registered'
-        )
+        raise HTTPException(status_code=400, detail="Username already registered")
 
     hashed_password = get_password_hash(user.password)
 
@@ -35,7 +30,7 @@ def create_user(user: UserSchema, session: Session):
         bio=user.bio,
         image=user.image,
         password=hashed_password,
-        email=user.email
+        email=user.email,
     )
 
     session.add(db_user)
@@ -45,11 +40,11 @@ def create_user(user: UserSchema, session: Session):
     return db_user
 
 
-@router.get('/user/{user_id}', response_model=UserPrivate, status_code=200)
+@router.get("/user/{user_id}", response_model=UserPrivate, status_code=200)
 def get_user(
     user_id: int,
     current_user: CurrentUser,
-    token: str = Depends(OAuth2PasswordBearer(tokenUrl='token'))
+    token: str = Depends(OAuth2PasswordBearer(tokenUrl="token")),
 ):
     """
     To do:
@@ -59,7 +54,7 @@ def get_user(
     """
 
     if current_user.id != user_id:
-        raise HTTPException(status_code=400, detail='Not enough permissions')
+        raise HTTPException(status_code=400, detail="Not enough permissions")
 
     response = UserPrivate(
         token=token,
@@ -72,24 +67,21 @@ def get_user(
     return response
 
 
-@router.get('/profiles/{username}', response_model=UserPublic, status_code=200)
+@router.get("/profiles/{username}", response_model=UserPublic, status_code=200)
 def get_profile(username: str, session: Session):
     user = session.scalar(select(User).where(User.username == username))
     if not user:
-        raise HTTPException(
-            status_code=404,
-            detail='User not found'
-        )
+        raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
-@router.get('/list', response_model=UserList, status_code=200)
+@router.get("/list", response_model=UserList, status_code=200)
 def read_user(session: Session, skip: int = 0, limit: int = 100):
     users = session.scalars(select(User).offset(skip).limit(limit)).all()
-    return {'users': users}
+    return {"users": users}
 
 
-@router.put('/user/{user_id}', response_model=UserPublic)
+@router.put("/user/{user_id}", response_model=UserPublic)
 def update_user(
     user_id: int,
     user: UserSchema,
@@ -106,7 +98,7 @@ def update_user(
     """
 
     if current_user.id != user_id:
-        raise HTTPException(status_code=400, detail='Not enough permissions')
+        raise HTTPException(status_code=400, detail="Not enough permissions")
 
     current_user.username = user.username
     current_user.password = user.password
@@ -120,12 +112,12 @@ def update_user(
     return current_user
 
 
-@router.delete('/user/{user_id}', response_model=Message)
+@router.delete("/user/{user_id}", response_model=Message)
 def delete_user(user_id: int, session: Session, current_user: CurrentUser):
 
     if current_user.id != user_id:
-        raise HTTPException(status_code=400, detail='Not enough permissions')
+        raise HTTPException(status_code=400, detail="Not enough permissions")
 
     session.delete(current_user)
     session.commit()
-    return {'detail': 'User deleted'}
+    return {"detail": "User deleted"}
