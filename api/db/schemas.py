@@ -15,16 +15,16 @@ class UserDB(UserSchema):
 
 
 class UserPublic(BaseModel):
-    id: int
+    # id: int
+    email: EmailStr
     username: str
     bio: str
     image: str
-    email: EmailStr
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserAuthenticated(UserPublic):
-    access_token: str
+class UserPrivate(UserPublic):
+    token: str
 
 
 class UserList(BaseModel):

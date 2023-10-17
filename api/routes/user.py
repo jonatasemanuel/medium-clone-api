@@ -1,3 +1,4 @@
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 
 from typing import Annotated
@@ -6,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from api.db.database import get_session
 from api.db.models import User
-from api.db.schemas import UserAuthenticated, UserSchema, Message, UserPublic, UserList
+from api.db.schemas import UserPrivate, UserSchema, Message, UserPublic, UserList
 from api.security import get_current_user, get_password_hash
 
 
@@ -44,22 +45,31 @@ def create_user(user: UserSchema, session: Session):
     return db_user
 
 
-@router.get('/user/{user_id}', response_model=UserPublic, status_code=200)
+@router.get('/user/{user_id}', response_model=UserPrivate, status_code=200)
 def get_user(
     user_id: int,
     current_user: CurrentUser,
+    token: str = Depends(OAuth2PasswordBearer(tokenUrl='token'))
 ):
     """
     To do:
 
-    [ ] - Switch response model to authentication scheme
     [ ] - Remove id parameter, use just current user
+
     """
 
     if current_user.id != user_id:
         raise HTTPException(status_code=400, detail='Not enough permissions')
 
-    return current_user
+    response = UserPrivate(
+        token=token,
+        username=current_user.username,
+        bio=current_user.bio,
+        image=current_user.image,
+        email=current_user.email,
+    )
+
+    return response
 
 
 @router.get('/profiles/{username}', response_model=UserPublic, status_code=200)
@@ -87,8 +97,12 @@ def update_user(
     current_user: CurrentUser,
 ):
     """
-    Atualizar para patch e  mudar Schema -> não utilizar id de busca
-    Não precisa confirmar usuario pois esta confirmando no current_user?
+    To - Do:
+
+    [ ] - Change PUT method to patch and update schema
+
+    Não precisa utilizar id na busca ?
+    não precisa confirmar usuario pois esta confirmando no current_user?
     """
 
     if current_user.id != user_id:
