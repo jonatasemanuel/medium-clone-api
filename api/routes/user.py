@@ -78,19 +78,29 @@ def get_profile(username: str, session: Session):
 
 
 @router.post("/profiles/{username}", response_model=Profile, status_code=200)
-def follow_user(username: str, session: Session, current_user: CurrentUser):
+def follow_user(username: str, session: Session, current_user: CurrentUser, profile: Profile):
+    db_user = session.scalar(
+       select(User).where(User.user_id == user.id)
+    )
+    if not db_user:
+        raise HTTPException(status_code=404, detail='User not found.')
+    
     user = session.scalar(select(User).where(User.username == username))
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # current_user.following = [user.id]
 
-    user_model = User(**current_user.model_dump())
-    user_model.user_id = user.id
+    for key, value in db_user.model_dump(exclude_unset=True).items():
+       setattr(db_user, key, value)
 
-    session.add(user_model)
+    session.add(db_user)
     session.commit()
-    session.refresh(user_model)
+    session.refresh(db_user)
+
+    profile: Profile = Profile(
+        user=db_user,
+        following=True
+    )
 
     return profile
 

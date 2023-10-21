@@ -15,7 +15,7 @@ class UserSchema(CustomBaseModel):
     password: str
     bio: str
     image: str
-    following: list
+    # following: list
 
 
 class UserDB(UserSchema):
