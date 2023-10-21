@@ -1,20 +1,28 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 
-class UserSchema(BaseModel):
+class CustomBaseModel(BaseModel):
+    def dict(self, *args, **kwargs):
+        d = super().model_dump(*args, **kwargs)
+        d = {k: v for k, v in d.items() if v is not None}
+        return d
+
+
+class UserSchema(CustomBaseModel):
     id: int
     username: str
     email: EmailStr
     password: str
     bio: str
     image: str
+    following: list
 
 
 class UserDB(UserSchema):
     id: int
 
 
-class UserPublic(BaseModel):
+class UserPublic(CustomBaseModel):
     # id: int
     email: EmailStr
     username: str
@@ -23,11 +31,16 @@ class UserPublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class Profile(CustomBaseModel):
+    user: UserPublic
+    following: bool
+
+
 class UserPrivate(UserPublic):
     token: str
 
 
-class UserList(BaseModel):
+class UserList(CustomBaseModel):
     users: list[UserPublic]
 
 
@@ -35,8 +48,24 @@ class Message(BaseModel):
     detail: str
 
 
-class TagSchema(BaseModel):
+class TagSchema(CustomBaseModel):
     slug: str
+
+
+class ArticleSchema(CustomBaseModel):
+    slug: str
+    title: str
+    description: str
+    body: str
+    created_at: str
+    updated_at: str
+
+    # tag: list[TagSchema]
+
+
+class ArticleInput(ArticleSchema):
+    tag_slug: str
+    article: ArticleSchema
 
 
 class Token(BaseModel):
@@ -46,16 +75,3 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: str | None = None
-
-
-class ArticleSchema(BaseModel):
-    slug: str
-    title: str
-    description: str
-    body: str
-    # tag: list[TagSchema]
-
-
-class ArticleInput(ArticleSchema):
-    tag_slug: str
-    article: ArticleSchema

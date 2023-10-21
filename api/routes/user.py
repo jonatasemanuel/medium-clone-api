@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from api.db.database import get_session
 from api.db.models import User
-from api.db.schemas import UserPrivate, UserSchema, Message, UserPublic, UserList
+from api.db.schemas import Profile, UserPrivate, UserSchema, Message, UserPublic, UserList
 from api.security import get_current_user, get_password_hash
 
 
@@ -18,10 +18,12 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 @router.post("/users", response_model=UserPublic, status_code=201)
 def create_user(user: UserSchema, session: Session):
-    db_user = session.scalar(select(User).where(User.username == user.username))
+    db_user = session.scalar(select(User).where(
+        User.username == user.username))
 
     if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
+        raise HTTPException(
+            status_code=400, detail="Username already registered")
 
     hashed_password = get_password_hash(user.password)
 
@@ -73,6 +75,24 @@ def get_profile(username: str, session: Session):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+@router.post("/profiles/{username}", response_model=Profile, status_code=200)
+def follow_user(username: str, session: Session, current_user: CurrentUser):
+    user = session.scalar(select(User).where(User.username == username))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # current_user.following = [user.id]
+
+    user_model = User(**current_user.model_dump())
+    user_model.user_id = user.id
+
+    session.add(user_model)
+    session.commit()
+    session.refresh(user_model)
+
+    return profile
 
 
 @router.get("/list", response_model=UserList, status_code=200)
