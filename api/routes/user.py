@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from api.db.database import get_session
 from api.db.models import User
-from api.db.schemas import Profile, UserPrivate, UserSchema, Message, UserPublic, UserList
+from api.db.schemas import Profile, UserPrivate, UserSchema, Message, UserPublic, UserList, UserUpdate
 from api.security import get_current_user, get_password_hash
 
 
@@ -42,21 +42,11 @@ def create_user(user: UserSchema, session: Session):
     return db_user
 
 
-@router.get("/user/{user_id}", response_model=UserPrivate, status_code=200)
+@router.get("/user", response_model=UserPrivate, status_code=200)
 def get_user(
-    user_id: int,
     current_user: CurrentUser,
     token: str = Depends(OAuth2PasswordBearer(tokenUrl="token")),
 ):
-    """
-    To do:
-
-    [ ] - Remove id parameter, use just current user
-
-    """
-
-    if current_user.id != user_id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
 
     response = UserPrivate(
         token=token,
@@ -79,28 +69,24 @@ def get_profile(username: str, session: Session):
 
 @router.post("/profiles/{username}", response_model=Profile, status_code=200)
 def follow_user(username: str, session: Session, current_user: CurrentUser, profile: Profile):
-    db_user = session.scalar(
-       select(User).where(User.user_id == user.id)
-    )
-    if not db_user:
-        raise HTTPException(status_code=404, detail='User not found.')
-    
+
     user = session.scalar(select(User).where(User.username == username))
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    following_list = session.scalars(
+        select(User.following).where(User.id == current_user.id)
+    )
+
+    if username in following_list:
+        pass
 
     for key, value in db_user.model_dump(exclude_unset=True).items():
-       setattr(db_user, key, value)
+        setattr(current_user, key, value)
 
-    session.add(db_user)
+    session.add(current_user)
     session.commit()
-    session.refresh(db_user)
-
-    profile: Profile = Profile(
-        user=db_user,
-        following=True
-    )
+    session.refresh(current_user)
 
     return profile
 
@@ -111,43 +97,32 @@ def read_user(session: Session, skip: int = 0, limit: int = 100):
     return {"users": users}
 
 
-@router.put("/user/{user_id}", response_model=UserPublic)
+@router.put("/user", response_model=UserPublic)
 def update_user(
-    user_id: int,
-    user: UserSchema,
+    user: UserUpdate,
     session: Session,
     current_user: CurrentUser,
 ):
     """
-    To - Do:
-
-    [ ] - Change PUT method to patch and update schema
-
-    Não precisa utilizar id na busca ?
-    não precisa confirmar usuario pois esta confirmando no current_user?
-    """
-
-    if current_user.id != user_id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
-
     current_user.username = user.username
     current_user.password = user.password
     current_user.email = user.email
     current_user.bio = user.bio
     current_user.image = user.image
+    """
 
+    for key, value in user.model_dump(exclude_unset=True).items():
+        setattr(current_user, key, value)
+
+    session.add(current_user)
     session.commit()
     session.refresh(current_user)
 
     return current_user
 
 
-@router.delete("/user/{user_id}", response_model=Message)
-def delete_user(user_id: int, session: Session, current_user: CurrentUser):
-
-    if current_user.id != user_id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
-
+@router.delete("/user", response_model=Message)
+def delete_user(session: Session, current_user: CurrentUser):
     session.delete(current_user)
     session.commit()
     return {"detail": "User deleted"}

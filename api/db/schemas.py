@@ -31,8 +31,15 @@ class UserPublic(CustomBaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class Profile(CustomBaseModel):
-    user: UserPublic
+class UserUpdate(CustomBaseModel):
+    username: str | None = None
+    email: EmailStr | None = None
+    password: str | None = None
+    bio: str | None = None
+    image: str | None = None
+
+
+class Profile(UserPublic):
     following: bool
 
 
