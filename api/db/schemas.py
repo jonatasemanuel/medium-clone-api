@@ -15,7 +15,6 @@ class UserSchema(CustomBaseModel):
     password: str
     bio: str
     image: str
-    # following: list
 
 
 class UserDB(UserSchema):
@@ -40,7 +39,7 @@ class UserUpdate(CustomBaseModel):
 
 
 class Profile(UserPublic):
-    following: bool
+    following: bool = False
 
 
 class UserPrivate(UserPublic):

@@ -1,8 +1,7 @@
 from datetime import datetime
-from enum import Enum
 from typing import List, Optional
 
-from sqlalchemy import Column, ForeignKey, Integer, Table, func
+from sqlalchemy import ForeignKey, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -10,12 +9,19 @@ class Base(DeclarativeBase):
     pass
 
 
-user_following = Table(
-    'user_following',
-    Base.metadata,
-    Column('user_id', Integer, ForeignKey("users.id"), primary_key=True),
-    Column('following_id', Integer, ForeignKey("users.id"), primary_key=True)
-)
+class Follow(Base):
+    __tablename__ = "association_table"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), primary_key=True)
+    following_id: Mapped[int] = mapped_column(
+        ForeignKey("followings.id"), primary_key=True)
+
+    following: Mapped["Following"] = relationship(
+        back_populates="users")
+
+    user: Mapped["User"] = relationship(
+        back_populates="following")
 
 
 class User(Base):
@@ -23,22 +29,22 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(default=None, primary_key=True)
+
     username: Mapped[str]
     email: Mapped[str]
     password: Mapped[str]
     bio: Mapped[Optional[str]]
     image: Mapped[Optional[str]]
-    following: Mapped[Optional[List["User"]]] = relationship(
-        "User",
-        secondary=user_following,
-        primaryjoin=id == user_following.c.user_id,
-        secondaryjoin=id == user_following.c.following_id,
-        back_populates='following'
-    )
-    #               ] = relationship(secondary=association_table)
 
-    # articles: Mapped[list['Article']] = relationship(
-    #    back_populates='author', cascade='all, delete-orphan')
+    following: Mapped[List["Follow"]] = relationship(back_populates="user")
+
+
+class Following(Base):
+    __tablename__ = "followings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    users: Mapped[List["Follow"]] = relationship(back_populates="following")
 
 
 """
@@ -71,9 +77,4 @@ class Tag(Base):
     #   ForeignKey("articles.slug"))
     # articles: Mapped[List["Article"]] = relationship(back_populates="tag")
 
-
-class Following(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-    user_id: int = Field(foreign_key='user.id')
 """

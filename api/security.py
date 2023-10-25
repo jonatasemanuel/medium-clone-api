@@ -60,9 +60,21 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    user = session.scalar(select(User).where(User.email == token_data.username))
+    user = session.scalar(select(User).where(
+        User.email == token_data.username))
 
     if user is None:
         raise credentials_exception
 
     return user
+
+
+async def get_current_user_optional(
+    session: Session = Depends(get_session),
+    token: str = Depends(oauth2_scheme),
+):
+    try:
+        user = await get_current_user(session, token)
+        return user
+    except HTTPException:
+        return None
