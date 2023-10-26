@@ -2,13 +2,25 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 
 from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from api.security import (
+    get_current_user,
+    get_current_user_optional,
+    get_password_hash
+)
 from api.db.database import get_session
 from api.db.models import Follow, User
-from api.db.schemas import Profile, UserPrivate, UserSchema, Message, UserPublic, UserList, UserUpdate
-from api.security import get_current_user, get_current_user_optional, get_password_hash
+from api.db.schemas import (
+    Profile,
+    UserPrivate,
+    UserSchema,
+    Message,
+    UserPublic,
+    UserList,
+    UserUpdate
+)
 
 
 router = APIRouter(prefix="/api", tags=["users"])
@@ -61,20 +73,23 @@ def get_user(
 
 @router.get("/profiles/{username}", response_model=Profile, status_code=200)
 def get_profile(
-        username: str,
-        session: Session,
-        # current_user: CurrentUser):
-        current_user: Optional[User] = Depends(get_current_user_optional)):
+    username: str,
+    session: Session,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
 
     user = session.scalar(select(User).where(User.username == username))
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     following = False
+    user_to_check = None
 
-    user_to_check = session.scalar(select(Follow).where(
-        Follow.following_id == user.id))
-    if current_user is not None and user_to_check:
+    if current_user:
+        user_to_check = session.scalar(select(Follow).where(
+            Follow.following_id == user.id, Follow.user_id == current_user.id))
+
+    if user_to_check:
         following = True
 
     profile = Profile(
@@ -87,7 +102,8 @@ def get_profile(
     return profile
 
 
-@ router.post("/profiles/{username}/follow", response_model=Profile, status_code=201)
+@ router.post("/profiles/{username}/follow",
+              response_model=Profile, status_code=201)
 def follow_user(username: str, session: Session, current_user: CurrentUser):
 
     user = session.scalar(select(User).where(User.username == username))
@@ -114,6 +130,34 @@ def follow_user(username: str, session: Session, current_user: CurrentUser):
         image=user.image,
         email=user.email,
         following=True
+    )
+    return profile
+
+
+@ router.delete("/profiles/{username}/follow", response_model=Profile, status_code=201)
+def unfollow_user(username: str, session: Session, current_user: CurrentUser):
+
+    user = session.scalar(select(User).where(User.username == username))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not current_user:
+        raise HTTPException(status_code=401, detail="User not logged in.")
+
+    user_to_unfollow = session.scalar(select(Follow).where(
+        Follow.following_id == user.id, Follow.user_id == current_user.id))
+    if not user_to_unfollow:
+        raise HTTPException(status_code=400, detail="User is not followed")
+
+    session.delete(user_to_unfollow)
+    session.commit()
+
+    profile = Profile(
+        username=user.username,
+        bio=user.bio,
+        image=user.image,
+        email=user.email,
+        following=False
     )
     return profile
 
