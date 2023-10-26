@@ -1,4 +1,5 @@
 from datetime import timedelta, datetime
+from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -71,7 +72,7 @@ async def get_current_user(
 
 async def get_current_user_optional(
     session: Session = Depends(get_session),
-    token: str = Depends(oauth2_scheme),
+    token: Optional[str] = Depends(oauth2_scheme),
 ):
     try:
         user = await get_current_user(session, token)
