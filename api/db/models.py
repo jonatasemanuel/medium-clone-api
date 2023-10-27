@@ -37,6 +37,7 @@ class User(Base):
     image: Mapped[Optional[str]]
 
     following: Mapped[List["Follow"]] = relationship(back_populates="user")
+    articles: Mapped[List["Article"]] = relationship(back_populates="author")
 
 
 class Following(Base):
@@ -47,34 +48,62 @@ class Following(Base):
     users: Mapped[List["Follow"]] = relationship(back_populates="following")
 
 
-"""
 class Article(Base):
     __tablename__ = "articles"
 
-    id: Mapped[Optional[int]] = mapped_column(default=None)
+    # id: Mapped[int] = mapped_column(primary_key=True, default=None)
+    slug: Mapped[str] = mapped_column(default=None, primary_key=True)
     title: Mapped[str]
-    slug: Mapped[str] = mapped_column(primary_key=True)
     description: Mapped[str]
     body: Mapped[str]
 
-    # tag_slug: Mapped[Optional[str]] = mapped_column(ForeignKey("tags.slug"))
-    # tag: Mapped["Tag"] = relationship(back_populates='articles')
-
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(onupdate=func.now())
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
-    # favorited_users_id: Optional[list] = None
+
+    # tag_list: Mapped[Optional[List["Tag"]]] = relationship(
+    #  secondary = "Tag.id",
+    # back_populates = 'articles')
+    # tag_id: Mapped[Optional[int]] = mapped_column(
+    # ForeignKey("tags.id"), nullable=False)
+
+    # favorited: Mapped[List["Favorites"]] = relationship(
+    #    back_populates="article")
+
     author: Mapped[User] = relationship(back_populates='articles')
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 
-
+"""
 class Tag(Base):
     __tablename__ = "tags"
 
-    slug: Mapped[str] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(default=None, primary_key=True)
+    slug: Mapped[str]
 
-    # article_slug: Mapped[Optional[str]] = mapped_column(
-    #   ForeignKey("articles.slug"))
-    # articles: Mapped[List["Article"]] = relationship(back_populates="tag")
+    articles: Mapped[List["Article"]] = relationship(back_populates="tag_list")
+"""
 
+"""
+class Favorites(Base):
+    __tablename__ = "favorite_association"
+
+    article_slug: Mapped[str] = mapped_column(
+        ForeignKey("articles.slug"), primary_key=True)
+    favorited_id: Mapped[int] = mapped_column(
+        ForeignKey("favorited.id"), primary_key=True)
+
+    favorited: Mapped["Favorited"] = relationship(
+        back_populates="articles")
+
+    article: Mapped["Article"] = relationship(
+        back_populates="favorited")
+
+
+class Favorited(Base):
+    __tablename__ = "favorited"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    articles: Mapped[List["Favorites"]] = relationship(
+        back_populates="favorited")
 """

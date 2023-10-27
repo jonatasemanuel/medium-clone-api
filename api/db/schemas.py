@@ -1,4 +1,8 @@
+from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+
+from api.db.models import Article, User
 
 
 class CustomBaseModel(BaseModel):
@@ -63,15 +67,24 @@ class ArticleSchema(CustomBaseModel):
     title: str
     description: str
     body: str
-    created_at: str
-    updated_at: str
+    # tag_list: list
+    created_at: datetime
+    updated_at: datetime
 
-    # tag: list[TagSchema]
+    # favorited: bool = False
+    # favorites_count: int
+    author: Profile
 
 
-class ArticleInput(ArticleSchema):
-    tag_slug: str
-    article: ArticleSchema
+class ArticlePublic(ArticleSchema):
+    pass
+
+
+class ArticleInput(CustomBaseModel):
+    title: str
+    description: str
+    body: str
+    # tag_list: Optional[list[str]] | None = None
 
 
 class Token(BaseModel):
