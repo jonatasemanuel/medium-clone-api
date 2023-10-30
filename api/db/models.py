@@ -60,11 +60,8 @@ class Article(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(onupdate=func.now())
 
-    # tag_list: Mapped[Optional[List["Tag"]]] = relationship(
-    #  secondary = "Tag.id",
-    # back_populates = 'articles')
-    # tag_id: Mapped[Optional[int]] = mapped_column(
-    # ForeignKey("tags.id"), nullable=False)
+    tag_list: Mapped[Optional[List["Tag"]]] = relationship(
+        back_populates='article')
 
     # favorited: Mapped[List["Favorites"]] = relationship(
     #    back_populates="article")
@@ -73,15 +70,23 @@ class Article(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 
-"""
 class Tag(Base):
     __tablename__ = "tags"
 
-    id: Mapped[int] = mapped_column(default=None, primary_key=True)
-    slug: Mapped[str]
+    name: Mapped[str] = mapped_column(default=None, primary_key=True)
 
-    articles: Mapped[List["Article"]] = relationship(back_populates="tag_list")
-"""
+    article_slug: Mapped[str] = mapped_column(
+        ForeignKey("articles.slug"), primary_key=True)
+    article: Mapped["Article"] = relationship(back_populates="tag_list")
+
+
+class TagArticle(Base):
+
+    article_slug: Mapped[str] = mapped_column(
+        ForeignKey("articles.slug"), primary_key=True)
+    tag_name: Mapped[str] = mapped_column(
+        ForeignKey("tags.name"), primary_key=True)
+
 
 """
 class Favorites(Base):
