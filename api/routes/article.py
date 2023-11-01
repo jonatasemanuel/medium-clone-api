@@ -25,10 +25,18 @@ Session = Annotated[Session, Depends(get_session)]
 def create_article(
     article: ArticleInput,
     current_user: CurrentUser,
-    session: Session
+    session: Session,
+    # tag_list: Optional[list] = [],
 ):
+    slug = slugify(article.title)
+
+    article_name = session.scalar(select(Article).where(Article.slug == slug))
+    if article_name:
+        raise HTTPException(
+            status_code=400, detail="Article title already used")
+
     db_article: Article = Article(
-        slug=slugify(article.title),
+        slug=slug,
         title=article.title,
         description=article.description,
         body=article.body,
@@ -39,26 +47,21 @@ def create_article(
 
     if article.tag_list is not None:
         for tag in article.tag_list:
-            tags_on_db = session.scalar(select(Tag).where(
-                Tag.name == tag))
-            if tags_on_db is None:
-                new_tag: Tag = Tag(
-                    name=tag
-                )
-                session.add(new_tag)
+            tags_to_link = session.scalar(select(TagArticle).where(
+                TagArticle.tag_name == tag, TagArticle.article_slug == slug))
+            if tags_to_link:
+                raise HTTPException(status_code=400, detail="Tag already attr")
 
-            # tags_article = session.scalar(select(TagArticle).where(
-            #  TagArticle.article_slug == tag))
+            tag = TagArticle(article_slug=slug, tag_name=tag)
 
-            # Fazer a associação de todas as tags passadas no TagArticle
+            session.add(tag)
+            session.commit()
+            session.refresh(tag)
 
-            # new_tag_article: TagArticle = TagArticle(
-            #    article_slug=article.slug
-            #    tag_name=tag
-            # )
+    tags = session.scalars(select(TagArticle).where(
+        TagArticle.article_slug == slug)).all()
 
-            # salvar de alguma forma em forma de lista.
-            db_article.tag_list = db_article.tag_list.append(new_tag)
+    db_article.tag_list = tags
 
     session.add(db_article)
     session.commit()
@@ -75,7 +78,7 @@ def create_article(
         title=db_article.title,
         description=db_article.description,
         body=db_article.body,
-        tag_list=db_article.tag_list,
+        tag_list=article.tag_list,
         created_at=db_article.created_at,
         updated_at=db_article.updated_at,
         author=author_profile,

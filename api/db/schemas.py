@@ -67,7 +67,7 @@ class ArticleSchema(CustomBaseModel):
     title: str
     description: str
     body: str
-    tag_list: Optional[list]
+    tag_list: Optional[list[TagSchema]] = []
     created_at: datetime
     updated_at: datetime
 
@@ -84,7 +84,7 @@ class ArticleInput(CustomBaseModel):
     title: str
     description: str
     body: str
-    tag_list: Optional[list[str]]
+    tag_list: Optional[list[str]] = []
 
 
 class Token(BaseModel):

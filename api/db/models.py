@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import ForeignKey, func
+from sqlalchemy import Column, ForeignKey, String, Table, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -48,6 +48,18 @@ class Following(Base):
     users: Mapped[List["Follow"]] = relationship(back_populates="following")
 
 
+class TagArticle(Base):
+    __tablename__ = "tags_article"
+
+    article_slug: Mapped[str] = mapped_column(
+        ForeignKey("articles.slug"), primary_key=True)
+    tag_name: Mapped[str] = mapped_column(
+        ForeignKey("tags.name"), primary_key=True)
+
+    articles: Mapped["Article"] = relationship(back_populates="tag_list")
+    tag: Mapped["Tag"] = relationship(back_populates="articles")
+
+
 class Article(Base):
     __tablename__ = "articles"
 
@@ -60,8 +72,8 @@ class Article(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(onupdate=func.now())
 
-    tag_list: Mapped[Optional[List["Tag"]]] = relationship(
-        back_populates='article')
+    tag_list: Mapped[Optional[List["TagArticle"]]] = relationship(
+        back_populates="articles")
 
     # favorited: Mapped[List["Favorites"]] = relationship(
     #    back_populates="article")
@@ -75,20 +87,28 @@ class Tag(Base):
 
     name: Mapped[str] = mapped_column(default=None, primary_key=True)
 
-    article_slug: Mapped[str] = mapped_column(
-        ForeignKey("articles.slug"), primary_key=True)
-    article: Mapped["Article"] = relationship(back_populates="tag_list")
+    articles: Mapped[List["TagArticle"]] = relationship(
+        back_populates="tag")
+    # article_slug: Mapped[str] = mapped_column(ForeignKey("articles.slug"))
 
 
+"""
 class TagArticle(Base):
+    __tablename__ = "tags_article"
 
     article_slug: Mapped[str] = mapped_column(
         ForeignKey("articles.slug"), primary_key=True)
     tag_name: Mapped[str] = mapped_column(
         ForeignKey("tags.name"), primary_key=True)
 
+    tag: Mapped["Tag"] = relationship(
+        back_populates="articles")
 
-"""
+    article: Mapped["Article"] = relationship(
+        back_populates="tag_list")
+
+
+
 class Favorites(Base):
     __tablename__ = "favorite_association"
 
