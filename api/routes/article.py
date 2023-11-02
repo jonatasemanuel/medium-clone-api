@@ -52,7 +52,7 @@ def create_article(
             if tags_to_link:
                 raise HTTPException(status_code=400, detail="Tag already attr")
 
-            tag = TagArticle(article_slug=slug, tag_name=tag)
+            tag = TagArticle(article_slug=slug, tag_name=slugify(tag))
 
             session.add(tag)
             session.commit()
@@ -78,6 +78,7 @@ def create_article(
         title=db_article.title,
         description=db_article.description,
         body=db_article.body,
+        # ARRUMAR UMA FORMA DE PASSAR EM FORDA DE DICIONARIO
         tag_list=article.tag_list,
         created_at=db_article.created_at,
         updated_at=db_article.updated_at,

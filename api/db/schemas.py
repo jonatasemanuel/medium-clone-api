@@ -67,17 +67,13 @@ class ArticleSchema(CustomBaseModel):
     title: str
     description: str
     body: str
-    tag_list: Optional[list[TagSchema]] = []
+    tag_list: Optional[list[str]] = []
     created_at: datetime
     updated_at: datetime
 
     # favorited: bool = False
     # favorites_count: int
     author: Profile
-
-
-class ArticlePublic(ArticleSchema):
-    pass
 
 
 class ArticleInput(CustomBaseModel):
