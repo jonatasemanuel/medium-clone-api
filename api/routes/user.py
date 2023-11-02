@@ -136,7 +136,8 @@ def follow_user(username: str, session: Session, current_user: CurrentUser):
     return profile
 
 
-@ router.delete("/profiles/{username}/follow", response_model=Profile, status_code=201)
+@ router.delete("/profiles/{username}/follow",
+                response_model=Profile, status_code=201)
 def unfollow_user(username: str, session: Session, current_user: CurrentUser):
 
     user = session.scalar(select(User).where(User.username == username))
