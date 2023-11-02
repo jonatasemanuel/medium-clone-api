@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from api.db.database import get_session
-from api.db.models import Article, Tag, TagArticle, User
-from api.db.schemas import ArticleInput, ArticleSchema, TagSchema
+from api.db.models import Article, TagArticle
+from api.db.schemas import ArticleInput, ArticleSchema
 from api.routes.user import CurrentUser, get_profile
 
 from api.security import get_current_user_optional
@@ -26,7 +26,6 @@ def create_article(
     article: ArticleInput,
     current_user: CurrentUser,
     session: Session,
-    # tag_list: Optional[list] = [],
 ):
     slug = slugify(article.title)
 
@@ -48,9 +47,12 @@ def create_article(
     if article.tag_list is not None:
         for tag in article.tag_list:
             tags_to_link = session.scalar(select(TagArticle).where(
-                TagArticle.tag_name == tag, TagArticle.article_slug == slug))
+                TagArticle.tag_name == tag,
+                TagArticle.article_slug == slug)
+            )
             if tags_to_link:
-                raise HTTPException(status_code=400, detail="Tag already attr")
+                raise HTTPException(
+                    status_code=400, detail=f"Tag '{tag}' is duplicated")
 
             tag = TagArticle(article_slug=slug, tag_name=slugify(tag))
 
@@ -78,7 +80,6 @@ def create_article(
         title=db_article.title,
         description=db_article.description,
         body=db_article.body,
-        # ARRUMAR UMA FORMA DE PASSAR EM FORDA DE DICIONARIO
         tag_list=article.tag_list,
         created_at=db_article.created_at,
         updated_at=db_article.updated_at,
