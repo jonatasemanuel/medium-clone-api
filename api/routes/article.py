@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from api.db.database import get_session
-from api.db.models import Article, TagArticle
+from api.db.models import Article, TagArticle, User
 from api.db.schemas import ArticleInput, ArticleSchema
 from api.routes.user import CurrentUser, get_profile
 
@@ -21,7 +21,7 @@ router = APIRouter(prefix='/api/articles', tags=['articles'])
 Session = Annotated[Session, Depends(get_session)]
 
 
-@ router.post('/', response_model=ArticleSchema, status_code=201)
+@router.post('/', response_model=ArticleSchema, status_code=201)
 def create_article(
     article: ArticleInput,
     current_user: CurrentUser,
@@ -84,6 +84,59 @@ def create_article(
         created_at=db_article.created_at,
         updated_at=db_article.updated_at,
         author=author_profile,
+    )
+
+    return article_response
+
+
+@router.get("/{slug}",
+            response_model=ArticleSchema,
+            status_code=200
+            )
+def get_article(
+    slug: str,
+    # user: CurrentUser,
+    session: Session
+):
+    # if not user:
+    #   raise HTTPException(status_code=401, detail="User not authenticated")
+
+    article = session.scalar(select(TagArticle).where(
+        TagArticle.article_slug == slug))
+
+    article_user = session.scalar(select(Article).where(
+        Article.slug == slug))
+
+    # user_db = session.scalar(select(User).where(User.username == username))
+
+    following = False
+
+    # author_profile = get_profile(
+    #    username=db_article.author.username,
+    #    session=session
+    # current_user=current_user
+    # )
+
+    tags = []
+    for tag in article_user.tag_list:
+        tags.append(tag.tag_name)
+
+    profile = Profile(
+        username=article_user.author.username,
+        bio=article_user.author.bio,
+        image=article_user.author.image,
+        email=article_user.author.email,
+        following=following
+    )
+    article_response: ArticleSchema = ArticleSchema(
+        slug=article_user.slug,
+        title=article_user.title,
+        description=article_user.description,
+        body=article_user.body,
+        tag_list=tags,
+        created_at=article_user.created_at,
+        updated_at=article_user.updated_at,
+        author=profile,
     )
 
     return article_response
