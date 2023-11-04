@@ -1,21 +1,15 @@
+from typing import Annotated, Optional
+
+from fastapi import APIRouter, Depends, HTTPException
 from slugify import slugify
 from sqlalchemy import func, select
-
-from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from api.db.database import get_session
 from api.db.models import Article, Follow, TagArticle, User
-from api.db.schemas import ArticleInput, ArticleSchema
+from api.db.schemas import ArticleInput, ArticleSchema, Message, Profile
 from api.routes.user import CurrentUser, get_profile
-
 from api.security import get_current_user_optional
-
-from api.db.schemas import (
-    Profile,
-    Message,
-)
 
 router = APIRouter(prefix='/api/articles', tags=['articles'])
 Session = Annotated[Session, Depends(get_session)]
@@ -32,7 +26,8 @@ def create_article(
     article_name = session.scalar(select(Article).where(Article.slug == slug))
     if article_name:
         raise HTTPException(
-            status_code=400, detail="Article title already used")
+            status_code=400, detail='Article title already used'
+        )
 
     db_article: Article = Article(
         slug=slug,
@@ -46,13 +41,15 @@ def create_article(
 
     if article.tag_list is not None:
         for tag in article.tag_list:
-            tags_to_link = session.scalar(select(TagArticle).where(
-                TagArticle.tag_name == tag,
-                TagArticle.article_slug == slug)
+            tags_to_link = session.scalar(
+                select(TagArticle).where(
+                    TagArticle.tag_name == tag, TagArticle.article_slug == slug
+                )
             )
             if tags_to_link:
                 raise HTTPException(
-                    status_code=400, detail=f"Tag '{tag}' is duplicated")
+                    status_code=400, detail=f"Tag '{tag}' is duplicated"
+                )
 
             tag = TagArticle(article_slug=slug, tag_name=slugify(tag))
 
@@ -60,8 +57,9 @@ def create_article(
             session.commit()
             session.refresh(tag)
 
-    tags = session.scalars(select(TagArticle).where(
-        TagArticle.article_slug == slug)).all()
+    tags = session.scalars(
+        select(TagArticle).where(TagArticle.article_slug == slug)
+    ).all()
 
     db_article.tag_list = tags
 
@@ -72,7 +70,7 @@ def create_article(
     author_profile = get_profile(
         username=db_article.author.username,
         session=session,
-        current_user=current_user
+        current_user=current_user,
     )
 
     article_response: ArticleSchema = ArticleSchema(
@@ -89,34 +87,36 @@ def create_article(
     return article_response
 
 
-@router.get("/feed", status_code=200)
+@router.get('/feed', status_code=200)
 def get_feed(session: Session, current_user: CurrentUser):
     # User -> followings -> User -> articles
-    following = session.scalars(select(Follow).where(
-        Follow.user_id == current_user.id,
-        Follow.following == current_user.following
+    following = session.scalars(
+        select(Follow).where(
+            Follow.user_id == current_user.id,
+            Follow.following == current_user.following,
+        )
+    ).all()
 
-    )).all()
-
-    feed = session.scalars(select(Article).offset(0).limit(
-        20).where(Article.user_id == current_user.following,
-                  )).all()   # for person in following:
+    feed = session.scalars(
+        select(Article)
+        .offset(0)
+        .limit(20)
+        .where(
+            Article.user_id == current_user.following,
+        )
+    ).all()   # for person in following:
 
     # for id in user_followings:
     #
-    return {"article": following}
+    return {'article': following}
 
 
-@router.get("/{slug}",
-            response_model=ArticleSchema,
-            status_code=200
-            )
+@router.get('/{slug}', response_model=ArticleSchema, status_code=200)
 def get_article(slug: str, session: Session):
     # if not user:
     #   raise HTTPException(status_code=401, detail="User not authenticated")
 
-    article_user = session.scalar(select(Article).where(
-        Article.slug == slug))
+    article_user = session.scalar(select(Article).where(Article.slug == slug))
 
     # user_db = session.scalar(select(User).where(User.username == username))
 
@@ -137,7 +137,7 @@ def get_article(slug: str, session: Session):
         bio=article_user.author.bio,
         image=article_user.author.image,
         email=article_user.author.email,
-        following=following
+        following=following,
     )
     article_response: ArticleSchema = ArticleSchema(
         slug=article_user.slug,
