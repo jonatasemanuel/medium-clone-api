@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from api.routes import tag, article, user, auth
+from api.routes import article, user, auth
 
 app = FastAPI()
 

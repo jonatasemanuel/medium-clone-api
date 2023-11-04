@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from api.db.database import get_session
-from api.db.models import Article, TagArticle, User
+from api.db.models import Article, Follow, TagArticle, User
 from api.db.schemas import ArticleInput, ArticleSchema
 from api.routes.user import CurrentUser, get_profile
 
@@ -89,20 +89,31 @@ def create_article(
     return article_response
 
 
+@router.get("/feed", status_code=200)
+def get_feed(session: Session, current_user: CurrentUser):
+    # User -> followings -> User -> articles
+    following = session.scalars(select(Follow).where(
+        Follow.user_id == current_user.id,
+        Follow.following == current_user.following
+
+    )).all()
+
+    feed = session.scalars(select(Article).offset(0).limit(
+        20).where(Article.user_id == current_user.following,
+                  )).all()   # for person in following:
+
+    # for id in user_followings:
+    #
+    return {"article": following}
+
+
 @router.get("/{slug}",
             response_model=ArticleSchema,
             status_code=200
             )
-def get_article(
-    slug: str,
-    # user: CurrentUser,
-    session: Session
-):
+def get_article(slug: str, session: Session):
     # if not user:
     #   raise HTTPException(status_code=401, detail="User not authenticated")
-
-    article = session.scalar(select(TagArticle).where(
-        TagArticle.article_slug == slug))
 
     article_user = session.scalar(select(Article).where(
         Article.slug == slug))
