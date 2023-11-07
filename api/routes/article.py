@@ -2,11 +2,11 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from slugify import slugify
-from sqlalchemy import func, select
+from sqlalchemy import func, join, select
 from sqlalchemy.orm import Session
 
 from api.db.database import get_session
-from api.db.models import Article, Follow, TagArticle, User
+from api.db.models import Article, Follow, Following, TagArticle, User
 from api.db.schemas import ArticleInput, ArticleSchema, Message, Profile
 from api.routes.user import CurrentUser, get_profile
 from api.security import get_current_user_optional
@@ -90,28 +90,19 @@ def create_article(
 @router.get('/feed', status_code=200)
 def get_feed(session: Session, current_user: CurrentUser):
     # User -> followings -> User -> articles
-    following = session.scalars(
-        select(Follow).where(
-            Follow.user_id == current_user.id,
-            Follow.following == current_user.following,
-        )
-    ).all()
+    """feed = select(Article).join(Follow.user).where(
+        Follow.user_id == current_user.id)
+    """
 
-    feed = session.scalars(
-        select(Article)
-        .offset(0)
-        .limit(20)
-        .where(
-            Article.user_id == current_user.following,
-        )
-    ).all()   # for person in following:
+    feed = select(Article, Follow).where(
+        Article.user_id == Follow.following_id,
+        Follow.user_id == current_user.id
+    )
 
-    # for id in user_followings:
-    #
-    return {'article': following}
+    return {'article': session.scalars(feed).all()}
 
 
-@router.get('/{slug}', response_model=ArticleSchema, status_code=200)
+@ router.get('/{slug}', response_model=ArticleSchema, status_code=200)
 def get_article(slug: str, session: Session):
     # if not user:
     #   raise HTTPException(status_code=401, detail="User not authenticated")
@@ -149,5 +140,7 @@ def get_article(slug: str, session: Session):
         updated_at=article_user.updated_at,
         author=profile,
     )
+
+    return article_response
 
     return article_response
