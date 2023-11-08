@@ -3,11 +3,11 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from slugify import slugify
 from sqlalchemy import func, join, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Bundle, Session
 
 from api.db.database import get_session
 from api.db.models import Article, Follow, Following, TagArticle, User
-from api.db.schemas import ArticleInput, ArticleSchema, Message, Profile
+from api.db.schemas import ArticleInput, ArticleSchema, Message, MultArticle, Profile
 from api.routes.user import CurrentUser, get_profile
 from api.security import get_current_user_optional
 
@@ -87,37 +87,58 @@ def create_article(
     return article_response
 
 
-@router.get('/feed', status_code=200)
+@router.get('/feed', response_model=MultArticle, status_code=200)
 def get_feed(session: Session, current_user: CurrentUser):
-    # User -> followings -> User -> articles
-    """feed = select(Article).join(Follow.user).where(
-        Follow.user_id == current_user.id)
+    """
+    articles_by_following = session.scalars(
+        select(Article).where(
+            Article.user_id == Follow.following_id,
+            Follow.user_id == current_user.id
+        ).order_by(Article.created_at)
+    ).all()
     """
 
-    feed = select(Article, Follow).where(
-        Article.user_id == Follow.following_id,
-        Follow.user_id == current_user.id
-    )
+    feed = session.scalars(
+        select(Article).where(
+            Article.user_id == Follow.following_id,
+            Follow.user_id == current_user.id
+        ).order_by(Article.created_at)
+    ).all()
 
-    return {'article': session.scalars(feed).all()}
+    for article in feed:
+        tags = []
+        author_name = article.author
+        tag_list = article.tag_list
+        for tag in tag_list:
+            tags.append(tag.tag_name)
+
+        profile = Profile(
+            username=author_name.username,
+            bio=author_name.bio,
+            image=author_name.image,
+            email=author_name.email,
+            following=True,
+        )
+        article_response: ArticleSchema = ArticleSchema(
+            slug=article.slug,
+            title=article.title,
+            description=article.description,
+            body=article.body,
+            tag_list=tags,
+            created_at=article.created_at,
+            updated_at=article.updated_at,
+            author=profile,
+        )
+
+    return article_response
 
 
 @ router.get('/{slug}', response_model=ArticleSchema, status_code=200)
 def get_article(slug: str, session: Session):
-    # if not user:
-    #   raise HTTPException(status_code=401, detail="User not authenticated")
 
     article_user = session.scalar(select(Article).where(Article.slug == slug))
 
-    # user_db = session.scalar(select(User).where(User.username == username))
-
     following = False
-
-    # author_profile = get_profile(
-    #    username=db_article.author.username,
-    #    session=session
-    # current_user=current_user
-    # )
 
     tags = []
     for tag in article_user.tag_list:
@@ -140,7 +161,5 @@ def get_article(slug: str, session: Session):
         updated_at=article_user.updated_at,
         author=profile,
     )
-
-    return article_response
 
     return article_response

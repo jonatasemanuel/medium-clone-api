@@ -77,6 +77,10 @@ class ArticleSchema(CustomBaseModel):
     author: Profile
 
 
+class MultArticle(CustomBaseModel):
+    articles: list[ArticleSchema]
+
+
 class ArticleInput(CustomBaseModel):
     title: str
     description: str
