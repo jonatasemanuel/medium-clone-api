@@ -68,8 +68,8 @@ class Article(Base):
     tag_list: Mapped[Optional[List['TagArticle']]] = relationship(
         back_populates='articles'
     )
-    # favorited: Mapped[List["Favorites"]] = relationship(
-    #    back_populates="article")
+    favorited: Mapped[List["Favorites"]] = relationship(
+        back_populates="article")
     author: Mapped[User] = relationship(back_populates='articles')
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
 
