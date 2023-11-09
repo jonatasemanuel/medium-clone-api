@@ -89,14 +89,6 @@ def create_article(
 
 @router.get('/feed', response_model=MultArticle, status_code=200)
 def get_feed(session: Session, current_user: CurrentUser):
-    """
-    articles_by_following = session.scalars(
-        select(Article).where(
-            Article.user_id == Follow.following_id,
-            Follow.user_id == current_user.id
-        ).order_by(Article.created_at)
-    ).all()
-    """
 
     feed = session.scalars(
         select(Article).where(
