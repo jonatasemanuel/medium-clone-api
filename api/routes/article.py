@@ -102,8 +102,10 @@ def get_feed(session: Session, current_user: CurrentUser):
         select(Article).where(
             Article.user_id == Follow.following_id,
             Follow.user_id == current_user.id
-        ).order_by(Article.created_at)
+        ).order_by(Article.created_at.desc())
     ).all()
+
+    articles_list = []
 
     for article in feed:
         tags = []
@@ -129,8 +131,9 @@ def get_feed(session: Session, current_user: CurrentUser):
             updated_at=article.updated_at,
             author=profile,
         )
+        articles_list.append(article_response)
 
-    return article_response
+    return {"articles": articles_list}
 
 
 @ router.get('/{slug}', response_model=ArticleSchema, status_code=200)
