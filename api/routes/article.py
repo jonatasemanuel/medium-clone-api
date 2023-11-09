@@ -7,7 +7,13 @@ from sqlalchemy.orm import Bundle, Session
 
 from api.db.database import get_session
 from api.db.models import Article, Follow, Following, TagArticle, User
-from api.db.schemas import ArticleInput, ArticleSchema, Message, MultArticle, Profile
+from api.db.schemas import (
+    ArticleInput,
+    ArticleSchema,
+    Message,
+    MultArticle,
+    Profile,
+)
 from api.routes.user import CurrentUser, get_profile
 from api.security import get_current_user_optional
 
@@ -91,10 +97,12 @@ def create_article(
 def get_feed(session: Session, current_user: CurrentUser):
 
     feed = session.scalars(
-        select(Article).where(
+        select(Article)
+        .where(
             Article.user_id == Follow.following_id,
-            Follow.user_id == current_user.id
-        ).order_by(Article.created_at.desc())
+            Follow.user_id == current_user.id,
+        )
+        .order_by(Article.created_at.desc())
     ).all()
 
     articles_list = []
@@ -125,10 +133,10 @@ def get_feed(session: Session, current_user: CurrentUser):
         )
         articles_list.append(article_response)
 
-    return {"articles": articles_list}
+    return {'articles': articles_list}
 
 
-@ router.get('/{slug}', response_model=ArticleSchema, status_code=200)
+@router.get('/{slug}', response_model=ArticleSchema, status_code=200)
 def get_article(slug: str, session: Session):
 
     article_user = session.scalar(select(Article).where(Article.slug == slug))

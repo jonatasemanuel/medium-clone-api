@@ -68,8 +68,9 @@ class Article(Base):
     tag_list: Mapped[Optional[List['TagArticle']]] = relationship(
         back_populates='articles'
     )
-    favorited: Mapped[List["Favorites"]] = relationship(
-        back_populates="article")
+    favorited: Mapped[List['Favorites']] = relationship(
+        back_populates='article'
+    )
     author: Mapped[User] = relationship(back_populates='articles')
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
 
@@ -82,24 +83,25 @@ class Tag(Base):
 
 
 class Favorites(Base):
-    __tablename__ = "favorite_association"
+    __tablename__ = 'favorite_association'
 
     article_slug: Mapped[str] = mapped_column(
-        ForeignKey("articles.slug"), primary_key=True)
+        ForeignKey('articles.slug'), primary_key=True
+    )
     favorited_id: Mapped[int] = mapped_column(
-        ForeignKey("favorited.id"), primary_key=True)
+        ForeignKey('favorited.id'), primary_key=True
+    )
 
-    favorited: Mapped["Favorited"] = relationship(
-        back_populates="articles")
+    favorited: Mapped['Favorited'] = relationship(back_populates='articles')
 
-    article: Mapped["Article"] = relationship(
-        back_populates="favorited")
+    article: Mapped['Article'] = relationship(back_populates='favorited')
 
 
 class Favorited(Base):
-    __tablename__ = "favorited"
+    __tablename__ = 'favorited'
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
-    articles: Mapped[List["Favorites"]] = relationship(
-        back_populates="favorited")
+    articles: Mapped[List['Favorites']] = relationship(
+        back_populates='favorited'
+    )
