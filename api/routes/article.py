@@ -193,6 +193,7 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     session.commit()
     session.refresh(favorite)
 
+    # Return Article
     return {'favorite': favorite}
 
 
@@ -216,4 +217,5 @@ def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     session.delete(article_to_unfavorite)
     session.commit()
 
+    # Return Article
     return {'detail': 'Unfavorited'}
