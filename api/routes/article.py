@@ -194,3 +194,26 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     session.refresh(favorite)
 
     return {'favorite': favorite}
+
+
+@router.delete('/{slug}/favorite', response_model=Message, status_code=201)
+def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
+    article = session.scalar(select(Article).where(Article.slug == slug))
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not exist')
+
+    article_to_unfavorite = session.scalar(
+        select(Favorites).where(
+            Favorites.favorited_by_user == current_user.username,
+            Favorites.article_slug == article.slug
+        )
+    )
+    if not article_to_unfavorite:
+        raise HTTPException(
+            status_code=400, detail='Article is not favorited'
+        )
+
+    session.delete(article_to_unfavorite)
+    session.commit()
+
+    return {'detail': 'Unfavorited'}
