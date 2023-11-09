@@ -88,8 +88,8 @@ class Favorites(Base):
     article_slug: Mapped[str] = mapped_column(
         ForeignKey('articles.slug'), primary_key=True
     )
-    favorited_id: Mapped[int] = mapped_column(
-        ForeignKey('favorited.id'), primary_key=True
+    favorited_by_user: Mapped[str] = mapped_column(
+        ForeignKey('favorited.username'), primary_key=True
     )
 
     favorited: Mapped['Favorited'] = relationship(back_populates='articles')
@@ -100,7 +100,7 @@ class Favorites(Base):
 class Favorited(Base):
     __tablename__ = 'favorited'
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    username: Mapped[str] = mapped_column(primary_key=True, index=True)
 
     articles: Mapped[List['Favorites']] = relationship(
         back_populates='favorited'

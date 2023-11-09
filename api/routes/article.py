@@ -6,7 +6,7 @@ from sqlalchemy import func, join, select
 from sqlalchemy.orm import Bundle, Session
 
 from api.db.database import get_session
-from api.db.models import Article, Follow, Following, TagArticle, User
+from api.db.models import Article, Favorites, Follow, Following, TagArticle, User
 from api.db.schemas import (
     ArticleInput,
     ArticleSchema,
@@ -166,3 +166,31 @@ def get_article(slug: str, session: Session):
     )
 
     return article_response
+
+
+@router.post('/{slug}/favorite', status_code=201)
+def favorite_article(session: Session, current_user: CurrentUser, slug: str):
+    article = session.scalar(select(Article).where(Article.slug == slug))
+    if not article:
+        raise HTTPException(status_code=404, detail='Article not exist')
+
+    article_to_favorite = session.scalar(
+        select(Favorites).where(
+            Favorites.favorited_by_user == current_user.username,
+            Favorites.article_slug == article.slug
+        )
+    )
+
+    if article_to_favorite:
+        raise HTTPException(
+            status_code=400, detail='Article already favorited'
+        )
+    favorite: Favorites = Favorites(
+        article_slug=slug, favorited_by_user=current_user.username
+    )
+
+    session.add(favorite)
+    session.commit()
+    session.refresh(favorite)
+
+    return {'favorite': favorite}
