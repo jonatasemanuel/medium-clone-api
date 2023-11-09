@@ -81,7 +81,6 @@ class Tag(Base):
     articles: Mapped[List['TagArticle']] = relationship(back_populates='tag')
 
 
-"""
 class Favorites(Base):
     __tablename__ = "favorite_association"
 
@@ -104,4 +103,3 @@ class Favorited(Base):
 
     articles: Mapped[List["Favorites"]] = relationship(
         back_populates="favorited")
-"""
