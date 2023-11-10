@@ -84,7 +84,7 @@ class ArticleSchemaFavorite(ArticleSchema):
 
 class MultArticle(CustomBaseModel):
     articles: list[ArticleSchemaFavorite]
-    #  articles_count: int
+    articles_count: int
 
 
 class ArticleInput(CustomBaseModel):

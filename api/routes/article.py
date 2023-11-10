@@ -149,7 +149,9 @@ def get_feed(session: Session, current_user: CurrentUser):
 
         articles_list.append(article_response)
 
-    return {'articles': articles_list}
+    articles_count = articles_list.__len__()
+
+    return {'articles': articles_list, 'articles_count': articles_count}
 
 
 @ router.get('/{slug}', response_model=ArticleSchema, status_code=200)
