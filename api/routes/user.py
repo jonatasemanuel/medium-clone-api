@@ -5,13 +5,15 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from api.db.database import get_session
+from api.db.models import Follow, User
+
 from api.security import (
     get_current_user,
     get_current_user_optional,
     get_password_hash
 )
-from api.db.database import get_session
-from api.db.models import Follow, User
+
 from api.db.schemas import (
     Profile,
     UserPrivate,
