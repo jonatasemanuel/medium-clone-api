@@ -77,8 +77,14 @@ class ArticleSchema(CustomBaseModel):
     author: Profile
 
 
+class ArticleSchemaFavorite(ArticleSchema):
+    favorited: bool = False
+    favorites_count: int
+
+
 class MultArticle(CustomBaseModel):
-    articles: list[ArticleSchema]
+    articles: list[ArticleSchemaFavorite]
+    #  articles_count: int
 
 
 class ArticleInput(CustomBaseModel):

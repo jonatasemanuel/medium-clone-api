@@ -2,14 +2,15 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from slugify import slugify
-from sqlalchemy import func, join, select
-from sqlalchemy.orm import Bundle, Session
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 from api.db.database import get_session
-from api.db.models import Article, Favorites, Follow, Following, TagArticle, User
+from api.db.models import Article, Favorites, Follow, TagArticle, User
 from api.db.schemas import (
     ArticleInput,
     ArticleSchema,
+    ArticleSchemaFavorite,
     Message,
     MultArticle,
     Profile,
@@ -111,8 +112,20 @@ def get_feed(session: Session, current_user: CurrentUser):
         tags = []
         author_name = article.author
         tag_list = article.tag_list
+
         for tag in tag_list:
             tags.append(tag.tag_name)
+
+        favorited = False
+
+        article_favorite = session.scalars(
+            select(Favorites).where(
+                Favorites.article_slug == article.slug
+            )
+        ).all()
+
+        if article_favorite:
+            favorited = True
 
         profile = Profile(
             username=author_name.username,
@@ -121,7 +134,7 @@ def get_feed(session: Session, current_user: CurrentUser):
             email=author_name.email,
             following=True,
         )
-        article_response: ArticleSchema = ArticleSchema(
+        article_response: ArticleSchemaFavorite = ArticleSchemaFavorite(
             slug=article.slug,
             title=article.title,
             description=article.description,
@@ -129,14 +142,17 @@ def get_feed(session: Session, current_user: CurrentUser):
             tag_list=tags,
             created_at=article.created_at,
             updated_at=article.updated_at,
+            favorited=favorited,
+            favorites_count=article_favorite.__len__(),
             author=profile,
         )
+
         articles_list.append(article_response)
 
     return {'articles': articles_list}
 
 
-@router.get('/{slug}', response_model=ArticleSchema, status_code=200)
+@ router.get('/{slug}', response_model=ArticleSchema, status_code=200)
 def get_article(slug: str, session: Session):
 
     article_user = session.scalar(select(Article).where(Article.slug == slug))
@@ -168,7 +184,7 @@ def get_article(slug: str, session: Session):
     return article_response
 
 
-@router.post('/{slug}/favorite', status_code=201)
+@ router.post('/{slug}/favorite', status_code=201)
 def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
@@ -197,7 +213,7 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     return {'favorite': favorite}
 
 
-@router.delete('/{slug}/favorite', response_model=Message, status_code=201)
+@ router.delete('/{slug}/favorite', response_model=Message, status_code=201)
 def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
