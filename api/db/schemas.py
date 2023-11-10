@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 from api.db.models import Article, User
@@ -59,7 +60,7 @@ class Message(BaseModel):
 
 
 class TagSchema(CustomBaseModel):
-    slug: str
+    name: str
 
 
 class ArticleSchema(CustomBaseModel):
@@ -67,7 +68,7 @@ class ArticleSchema(CustomBaseModel):
     title: str
     description: str
     body: str
-    # tag_list: list
+    tag_list: Optional[list[str]] = []
     created_at: datetime
     updated_at: datetime
 
@@ -76,15 +77,15 @@ class ArticleSchema(CustomBaseModel):
     author: Profile
 
 
-class ArticlePublic(ArticleSchema):
-    pass
+class MultArticle(CustomBaseModel):
+    articles: list[ArticleSchema]
 
 
 class ArticleInput(CustomBaseModel):
     title: str
     description: str
     body: str
-    # tag_list: Optional[list[str]] | None = None
+    tag_list: Optional[list[str]] = []
 
 
 class Token(BaseModel):

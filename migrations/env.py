@@ -18,7 +18,6 @@ config.set_main_option("sqlalchemy.url", Settings().DB_URL)
 # Interpret the config file
 target_metadata = Base.metadata
 # other values from the config, defined by the needs of env.py,
-
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
