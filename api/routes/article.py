@@ -119,9 +119,7 @@ def get_feed(session: Session, current_user: CurrentUser):
         favorited = False
 
         article_favorite = session.scalars(
-            select(Favorites).where(
-                Favorites.article_slug == article.slug
-            )
+            select(Favorites).where(Favorites.article_slug == article.slug)
         ).all()
 
         if article_favorite:
@@ -154,7 +152,7 @@ def get_feed(session: Session, current_user: CurrentUser):
     return {'articles': articles_list, 'articles_count': articles_count}
 
 
-@ router.get('/{slug}', response_model=ArticleSchema, status_code=200)
+@router.get('/{slug}', response_model=ArticleSchema, status_code=200)
 def get_article(slug: str, session: Session):
 
     article_user = session.scalar(select(Article).where(Article.slug == slug))
@@ -186,7 +184,7 @@ def get_article(slug: str, session: Session):
     return article_response
 
 
-@ router.post('/{slug}/favorite', status_code=201)
+@router.post('/{slug}/favorite', status_code=201)
 def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
@@ -195,7 +193,7 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     article_to_favorite = session.scalar(
         select(Favorites).where(
             Favorites.favorited_by_user == current_user.username,
-            Favorites.article_slug == article.slug
+            Favorites.article_slug == article.slug,
         )
     )
 
@@ -215,7 +213,7 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     return {'favorite': favorite}
 
 
-@ router.delete('/{slug}/favorite', response_model=Message, status_code=201)
+@router.delete('/{slug}/favorite', response_model=Message, status_code=201)
 def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
@@ -224,13 +222,11 @@ def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     article_to_unfavorite = session.scalar(
         select(Favorites).where(
             Favorites.favorited_by_user == current_user.username,
-            Favorites.article_slug == article.slug
+            Favorites.article_slug == article.slug,
         )
     )
     if not article_to_unfavorite:
-        raise HTTPException(
-            status_code=400, detail='Article is not favorited'
-        )
+        raise HTTPException(status_code=400, detail='Article is not favorited')
 
     session.delete(article_to_unfavorite)
     session.commit()
