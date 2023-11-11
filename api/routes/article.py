@@ -1,6 +1,6 @@
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from slugify import slugify
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -10,10 +10,10 @@ from api.db.models import Article, Favorites, Follow, TagArticle, User
 from api.db.schemas import (
     ArticleInput,
     ArticleSchema,
-    ArticleSchemaFavorite,
     Message,
     MultArticle,
     Profile,
+    PublicArticleSchema,
 )
 from api.routes.user import CurrentUser, get_profile
 from api.security import get_current_user_optional
@@ -80,7 +80,7 @@ def create_article(
         current_user=current_user,
     )
 
-    article_response: ArticleSchema = ArticleSchema(
+    article_response: PublicArticleSchema = PublicArticleSchema(
         slug=db_article.slug,
         title=db_article.title,
         description=db_article.description,
@@ -89,9 +89,102 @@ def create_article(
         created_at=db_article.created_at,
         updated_at=db_article.updated_at,
         author=author_profile,
+        favorited=False,
+        favorites_count=0
     )
 
     return article_response
+
+
+@router.get('/', response_model=MultArticle, status_code=200)
+def get_articles(
+    session: Session,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    tag: str = Query(None),
+    author: str = Query(None),
+    favorited: str = Query(None),
+    offset: Optional[int] = 0,
+    limit: Optional[int] = 20
+):
+    query = select(Article)
+
+    if tag:
+        query = select(Article).where(Article.tag_list.any(tag_name=tag))
+
+    if author:
+        query = select(Article).where(Article.author.has(username=author))
+
+    if favorited:
+        query = select(Article).where(
+            Article.favorited.any(favorited_by_user=favorited)
+        )
+
+    articles = session.scalars(
+        query.order_by(Article.created_at.desc()).offset(offset).limit(limit)
+    ).all()
+    articles_list = []
+
+    for article in articles:
+        tags = []
+        author_name = article.author
+        tag_list = article.tag_list
+
+        for tag in tag_list:
+            tags.append(tag.tag_name)
+
+        following = False
+        favorited_article = False
+
+        article_favorite = session.scalars(
+            select(Favorites).where(Favorites.article_slug == article.slug)
+        ).all()
+
+        if current_user:
+
+            checking_following_author = session.scalar(
+                select(Follow).where(
+                    Follow.following_id == article.user_id,
+                    Follow.user_id == current_user.id,
+                )
+            )
+            article_to_favorite = session.scalar(
+                select(Favorites).where(
+                    Favorites.favorited_by_user == current_user.username,
+                    Favorites.article_slug == article.slug,
+                )
+            )
+
+            if checking_following_author:
+                following = True
+
+            if article_to_favorite:
+                favorited_article = True
+
+        profile = Profile(
+            username=author_name.username,
+            bio=author_name.bio,
+            image=author_name.image,
+            email=author_name.email,
+            following=following,
+        )
+        article_response: PublicArticleSchema = PublicArticleSchema(
+            slug=article.slug,
+            title=article.title,
+            description=article.description,
+            body=article.body,
+            tag_list=tags,
+            created_at=article.created_at,
+            updated_at=article.updated_at,
+            favorited=favorited_article,
+            favorites_count=article_favorite.__len__(),
+            author=profile,
+        )
+
+        articles_list.append(article_response)
+
+    articles_count = articles_list.__len__()
+
+    return {'articles': articles_list, 'articles_count': articles_count}
 
 
 @router.get('/feed', response_model=MultArticle, status_code=200)
@@ -119,12 +212,17 @@ def get_feed(session: Session, current_user: CurrentUser):
         favorited = False
 
         article_favorite = session.scalars(
-            select(Favorites).where(
-                Favorites.article_slug == article.slug
-            )
+            select(Favorites).where(Favorites.article_slug == article.slug)
         ).all()
 
-        if article_favorite:
+        check_user_favorite = session.scalar(
+            select(Favorites).where(
+                Favorites.favorited_by_user == current_user.username,
+                Favorites.article_slug == article.slug,
+            )
+        )
+
+        if check_user_favorite:
             favorited = True
 
         profile = Profile(
@@ -154,12 +252,16 @@ def get_feed(session: Session, current_user: CurrentUser):
     return {'articles': articles_list, 'articles_count': articles_count}
 
 
-@ router.get('/{slug}', response_model=ArticleSchema, status_code=200)
+@router.get('/{slug}', status_code=200)
 def get_article(slug: str, session: Session):
 
     article_user = session.scalar(select(Article).where(Article.slug == slug))
 
     following = False
+
+    article_favorite = session.scalars(
+        select(Favorites).where(Favorites.article_slug == slug)
+    ).all()
 
     tags = []
     for tag in article_user.tag_list:
@@ -172,7 +274,7 @@ def get_article(slug: str, session: Session):
         email=article_user.author.email,
         following=following,
     )
-    article_response: ArticleSchema = ArticleSchema(
+    article_response: PublicArticleSchema = PublicArticleSchema(
         slug=article_user.slug,
         title=article_user.title,
         description=article_user.description,
@@ -181,12 +283,14 @@ def get_article(slug: str, session: Session):
         created_at=article_user.created_at,
         updated_at=article_user.updated_at,
         author=profile,
+        favorites_count=article_favorite.__len__(),
+        favorited=False
     )
 
     return article_response
 
 
-@ router.post('/{slug}/favorite', status_code=201)
+@router.post('/{slug}/favorite', status_code=201)
 def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
@@ -195,7 +299,7 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     article_to_favorite = session.scalar(
         select(Favorites).where(
             Favorites.favorited_by_user == current_user.username,
-            Favorites.article_slug == article.slug
+            Favorites.article_slug == article.slug,
         )
     )
 
@@ -215,7 +319,7 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     return {'favorite': favorite}
 
 
-@ router.delete('/{slug}/favorite', response_model=Message, status_code=201)
+@router.delete('/{slug}/favorite', response_model=Message, status_code=201)
 def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
@@ -224,13 +328,11 @@ def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     article_to_unfavorite = session.scalar(
         select(Favorites).where(
             Favorites.favorited_by_user == current_user.username,
-            Favorites.article_slug == article.slug
+            Favorites.article_slug == article.slug,
         )
     )
     if not article_to_unfavorite:
-        raise HTTPException(
-            status_code=400, detail='Article is not favorited'
-        )
+        raise HTTPException(status_code=400, detail='Article is not favorited')
 
     session.delete(article_to_unfavorite)
     session.commit()

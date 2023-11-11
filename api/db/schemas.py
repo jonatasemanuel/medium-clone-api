@@ -71,19 +71,24 @@ class ArticleSchema(CustomBaseModel):
     tag_list: Optional[list[str]] = []
     created_at: datetime
     updated_at: datetime
-
-    # favorited: bool = False
-    # favorites_count: int
     author: Profile
 
 
-class ArticleSchemaFavorite(ArticleSchema):
+class PublicArticleSchema(CustomBaseModel):
+    slug: str
+    title: str
+    description: str
+    body: str
+    tag_list: Optional[list[str]] = []
+    created_at: datetime
+    updated_at: datetime
     favorited: bool = False
     favorites_count: int
+    author: Profile
 
 
 class MultArticle(CustomBaseModel):
-    articles: list[ArticleSchemaFavorite]
+    articles: list[PublicArticleSchema]
     articles_count: int
 
 
