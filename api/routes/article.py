@@ -10,10 +10,10 @@ from api.db.models import Article, Favorites, Follow, TagArticle, User
 from api.db.schemas import (
     ArticleInput,
     ArticleSchema,
-    ArticleSchemaFavorite,
     Message,
     MultArticle,
     Profile,
+    PublicArticleSchema,
 )
 from api.routes.user import CurrentUser, get_profile
 from api.security import get_current_user_optional
@@ -80,7 +80,7 @@ def create_article(
         current_user=current_user,
     )
 
-    article_response: ArticleSchema = ArticleSchema(
+    article_response: PublicArticleSchema = PublicArticleSchema(
         slug=db_article.slug,
         title=db_article.title,
         description=db_article.description,
@@ -89,6 +89,8 @@ def create_article(
         created_at=db_article.created_at,
         updated_at=db_article.updated_at,
         author=author_profile,
+        favorited=False,
+        favorites_count=0
     )
 
     return article_response
@@ -165,7 +167,7 @@ def get_articles(
             email=author_name.email,
             following=following,
         )
-        article_response: ArticleSchemaFavorite = ArticleSchemaFavorite(
+        article_response: PublicArticleSchema = PublicArticleSchema(
             slug=article.slug,
             title=article.title,
             description=article.description,
@@ -250,12 +252,16 @@ def get_feed(session: Session, current_user: CurrentUser):
     return {'articles': articles_list, 'articles_count': articles_count}
 
 
-@router.get('/{slug}', response_model=ArticleSchema, status_code=200)
+@router.get('/{slug}', status_code=200)
 def get_article(slug: str, session: Session):
 
     article_user = session.scalar(select(Article).where(Article.slug == slug))
 
     following = False
+
+    article_favorite = session.scalars(
+        select(Favorites).where(Favorites.article_slug == slug)
+    ).all()
 
     tags = []
     for tag in article_user.tag_list:
@@ -268,7 +274,7 @@ def get_article(slug: str, session: Session):
         email=article_user.author.email,
         following=following,
     )
-    article_response: ArticleSchema = ArticleSchema(
+    article_response: PublicArticleSchema = PublicArticleSchema(
         slug=article_user.slug,
         title=article_user.title,
         description=article_user.description,
@@ -277,6 +283,8 @@ def get_article(slug: str, session: Session):
         created_at=article_user.created_at,
         updated_at=article_user.updated_at,
         author=profile,
+        favorites_count=article_favorite.__len__(),
+        favorited=False
     )
 
     return article_response
