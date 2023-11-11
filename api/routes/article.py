@@ -104,34 +104,27 @@ def get_articles(
     offset: int = Query(None),
     limit: int = Query(None)
 ):
-    query = session.scalars(
-        select(Article).order_by(Article.created_at.desc())
-    ).all()
+    query = select(Article)
 
     if tag:
-        query = session.scalars(
-            select(Article).where(
-                Article.tag_list.any(tag_name=tag)
-            ).order_by(Article.created_at.desc())
-        ).all()
+        query = select(Article).where(
+            Article.tag_list.any(tag_name=tag)
+        )
 
     if author:
-        query = session.scalars(
-            select(Article).where(
-                Article.author.has(username=author)
-            ).order_by(Article.created_at.desc())
-        ).all()
+        query = select(Article).where(
+            Article.author.has(username=author)
+        )
 
     if favorited:
-        query = session.scalars(
-            select(Article).where(
-                Article.favorited.any(favorited_by_user=favorited)
-            ).order_by(Article.created_at.desc())
-        ).all()
+        query = select(Article).where(
+            Article.favorited.any(favorited_by_user=favorited))
 
+    articles = session.scalars(query.order_by(
+        Article.created_at.desc()).offset(offset).limit(limit)).all()
     articles_list = []
 
-    for article in query:
+    for article in articles:
         tags = []
         author_name = article.author
         tag_list = article.tag_list
