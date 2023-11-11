@@ -101,27 +101,25 @@ def get_articles(
     tag: str = Query(None),
     author: str = Query(None),
     favorited: str = Query(None),
-    offset: int = Query(None),
-    limit: int = Query(None)
+    offset: Optional[int] = 0,
+    limit: Optional[int] = 20
 ):
     query = select(Article)
 
     if tag:
-        query = select(Article).where(
-            Article.tag_list.any(tag_name=tag)
-        )
+        query = select(Article).where(Article.tag_list.any(tag_name=tag))
 
     if author:
-        query = select(Article).where(
-            Article.author.has(username=author)
-        )
+        query = select(Article).where(Article.author.has(username=author))
 
     if favorited:
         query = select(Article).where(
-            Article.favorited.any(favorited_by_user=favorited))
+            Article.favorited.any(favorited_by_user=favorited)
+        )
 
-    articles = session.scalars(query.order_by(
-        Article.created_at.desc()).offset(offset).limit(limit)).all()
+    articles = session.scalars(
+        query.order_by(Article.created_at.desc()).offset(offset).limit(limit)
+    ).all()
     articles_list = []
 
     for article in articles:
@@ -143,7 +141,6 @@ def get_articles(
 
             checking_following_author = session.scalar(
                 select(Follow).where(
-                    # Pegar o autor pelo artigo
                     Follow.following_id == article.user_id,
                     Follow.user_id == current_user.id,
                 )
@@ -188,7 +185,7 @@ def get_articles(
     return {'articles': articles_list, 'articles_count': articles_count}
 
 
-@ router.get('/feed', response_model=MultArticle, status_code=200)
+@router.get('/feed', response_model=MultArticle, status_code=200)
 def get_feed(session: Session, current_user: CurrentUser):
 
     feed = session.scalars(
@@ -253,7 +250,7 @@ def get_feed(session: Session, current_user: CurrentUser):
     return {'articles': articles_list, 'articles_count': articles_count}
 
 
-@ router.get('/{slug}', response_model=ArticleSchema, status_code=200)
+@router.get('/{slug}', response_model=ArticleSchema, status_code=200)
 def get_article(slug: str, session: Session):
 
     article_user = session.scalar(select(Article).where(Article.slug == slug))
@@ -285,7 +282,7 @@ def get_article(slug: str, session: Session):
     return article_response
 
 
-@ router.post('/{slug}/favorite', status_code=201)
+@router.post('/{slug}/favorite', status_code=201)
 def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
@@ -314,7 +311,7 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     return {'favorite': favorite}
 
 
-@ router.delete('/{slug}/favorite', response_model=Message, status_code=201)
+@router.delete('/{slug}/favorite', response_model=Message, status_code=201)
 def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
