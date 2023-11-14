@@ -23,7 +23,7 @@ router = APIRouter(prefix='/api/articles', tags=['articles'])
 Session = Annotated[Session, Depends(get_session)]
 
 
-@router.post('/', response_model=ArticleSchema, status_code=201)
+@router.post('/', status_code=201)
 def create_article(
     article: ArticleInput,
     current_user: CurrentUser,
