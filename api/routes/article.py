@@ -91,7 +91,7 @@ def create_article(
         updated_at=db_article.updated_at,
         author=author_profile,
         favorited=False,
-        favorites_count=0
+        favorites_count=0,
     )
 
     return article_response
@@ -105,7 +105,7 @@ def get_articles(
     author: str = Query(None),
     favorited: str = Query(None),
     offset: Optional[int] = 0,
-    limit: Optional[int] = 20
+    limit: Optional[int] = 20,
 ):
     query = select(Article)
 
@@ -210,10 +210,10 @@ def get_feed(session: Session, current_user: CurrentUser):
         for tag in tag_list:
             tags.append(tag.tag_name)
 
-        favorited = false
+        favorited = False
 
         article_favorite = session.scalars(
-            select(favorites).where(favorites.article_slug == article.slug)
+            select(Favorites).where(Favorites.article_slug == article.slug)
         ).all()
 
         check_user_favorite = session.scalar(
@@ -233,7 +233,7 @@ def get_feed(session: Session, current_user: CurrentUser):
             email=author_name.email,
             following=True,
         )
-        article_response: ArticleSchemaFavorite = ArticleSchemaFavorite(
+        article_response: PublicArticleSchema = PublicArticleSchema(
             slug=article.slug,
             title=article.title,
             description=article.description,
@@ -285,7 +285,7 @@ def get_article(slug: str, session: Session):
         updated_at=article_user.updated_at,
         author=profile,
         favorites_count=article_favorite.__len__(),
-        favorited=False
+        favorited=False,
     )
 
     return article_response
@@ -342,7 +342,9 @@ def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     return {'detail': 'Unfavorited'}
 
 
-@router.patch('/{article_slug}', response_model=PublicArticleSchema, status_code=200)
+@router.patch(
+    '/{article_slug}', response_model=PublicArticleSchema, status_code=200
+)
 def update_article(
     article_slug: str,
     article: ArticleUpdate,
@@ -351,25 +353,46 @@ def update_article(
 ):
     db_article = session.scalar(
         select(Article).where(
-            Article.slug == article_slug,
-            Article.user_id == current_user.id))
+            Article.slug == article_slug, Article.user_id == current_user.id
+        )
+    )
 
     if db_article is None:
         raise HTTPException(status_code=404, detail='Article not found')
 
-    tags = []
-    for tag in db_article.tag_list:
-        tags.append(tag.tag_name)
+    for key, value in article.model_dump(exclude_unset=True).items():
+        setattr(current_user, key, value)
 
-    db_article.title = article.title
-    db_article.slug = slugify(article.title)
-    db_article.tags = tags
-    db_article.description = article.description
-    db_article.body = article.body
+    if article.title:
+        db_article.slug = slugify(article.title)
+
+    # ISSUE: just adding new tags, not updated older.
+    if article.tag_list is not None:
+        for tag in article.tag_list:
+            tags_to_link = session.scalar(
+                select(TagArticle).where(
+                    TagArticle.tag_name == tag,
+                    TagArticle.article_slug == article_slug,
+                )
+            )
+            if tags_to_link:
+                raise HTTPException(
+                    status_code=400, detail=f"Tag '{tag}' is duplicated"
+                )
+
+            tag = TagArticle(article_slug=article_slug, tag_name=slugify(tag))
+
+            session.add(tag)
+            session.commit()
+            session.refresh(tag)
 
     session.add(db_article)
     session.commit()
     session.refresh(db_article)
+
+    tags = []
+    for tag in db_article.tag_list:
+        tags.append(tag.tag_name)
 
     checking_following_author = session.scalar(
         select(Follow).where(
@@ -377,20 +400,21 @@ def update_article(
             Follow.user_id == current_user.id,
         )
     )
-    article_to_favorite = session.scalar(
+
+    following = False
+    if checking_following_author:
+        following = True
+
+    check_user_favorite = session.scalar(
         select(Favorites).where(
             Favorites.favorited_by_user == current_user.username,
             Favorites.article_slug == db_article.slug,
         )
     )
 
-    following = False
-    if checking_following_author:
-        following = True
-
-    favorited_article = False
-    if article_to_favorite:
-        favorited_article = True
+    favorited = False
+    if check_user_favorite:
+        favorited = True
 
     article_favorite = session.scalars(
         select(Favorites).where(Favorites.article_slug == db_article.slug)
@@ -413,7 +437,7 @@ def update_article(
         updated_at=db_article.updated_at,
         author=profile,
         favorites_count=article_favorite.__len__(),
-        favorited=favorited_article,
+        favorited=favorited,
     )
 
     return article_response

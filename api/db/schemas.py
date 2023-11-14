@@ -67,6 +67,7 @@ class ArticleUpdate(CustomBaseModel):
     title: str | None = None
     description: str | None = None
     body: str | None = None
+    tag_list: Optional[list[str]] | None = None
 
 
 class ArticleSchema(CustomBaseModel):
