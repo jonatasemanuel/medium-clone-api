@@ -10,6 +10,7 @@ from api.db.models import Article, Favorites, Follow, TagArticle, User
 from api.db.schemas import (
     ArticleInput,
     ArticleSchema,
+    ArticleUpdate,
     Message,
     MultArticle,
     Profile,
@@ -209,10 +210,10 @@ def get_feed(session: Session, current_user: CurrentUser):
         for tag in tag_list:
             tags.append(tag.tag_name)
 
-        favorited = False
+        favorited = false
 
         article_favorite = session.scalars(
-            select(Favorites).where(Favorites.article_slug == article.slug)
+            select(favorites).where(favorites.article_slug == article.slug)
         ).all()
 
         check_user_favorite = session.scalar(
@@ -339,3 +340,80 @@ def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
 
     # Return Article
     return {'detail': 'Unfavorited'}
+
+
+@router.patch('/{article_slug}', response_model=PublicArticleSchema, status_code=200)
+def update_article(
+    article_slug: str,
+    article: ArticleUpdate,
+    session: Session,
+    current_user: CurrentUser,
+):
+    db_article = session.scalar(
+        select(Article).where(
+            Article.slug == article_slug,
+            Article.user_id == current_user.id))
+
+    if db_article is None:
+        raise HTTPException(status_code=404, detail='Article not found')
+
+    tags = []
+    for tag in db_article.tag_list:
+        tags.append(tag.tag_name)
+
+    db_article.title = article.title
+    db_article.slug = slugify(article.title)
+    db_article.tags = tags
+    db_article.description = article.description
+    db_article.body = article.body
+
+    session.add(db_article)
+    session.commit()
+    session.refresh(db_article)
+
+    checking_following_author = session.scalar(
+        select(Follow).where(
+            Follow.following_id == db_article.user_id,
+            Follow.user_id == current_user.id,
+        )
+    )
+    article_to_favorite = session.scalar(
+        select(Favorites).where(
+            Favorites.favorited_by_user == current_user.username,
+            Favorites.article_slug == db_article.slug,
+        )
+    )
+
+    following = False
+    if checking_following_author:
+        following = True
+
+    favorited_article = False
+    if article_to_favorite:
+        favorited_article = True
+
+    article_favorite = session.scalars(
+        select(Favorites).where(Favorites.article_slug == db_article.slug)
+    ).all()
+
+    profile = Profile(
+        username=current_user.username,
+        bio=current_user.bio,
+        image=current_user.image,
+        email=current_user.email,
+        following=following,
+    )
+    article_response: PublicArticleSchema = PublicArticleSchema(
+        slug=db_article.slug,
+        title=db_article.title,
+        description=db_article.description,
+        body=db_article.body,
+        tag_list=tags,
+        created_at=db_article.created_at,
+        updated_at=db_article.updated_at,
+        author=profile,
+        favorites_count=article_favorite.__len__(),
+        favorited=favorited_article,
+    )
+
+    return article_response
