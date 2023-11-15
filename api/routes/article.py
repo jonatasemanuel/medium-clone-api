@@ -360,14 +360,22 @@ def update_article(
     if db_article is None:
         raise HTTPException(status_code=404, detail='Article not found')
 
-    for key, value in article.model_dump(exclude_unset=True).items():
-        setattr(current_user, key, value)
+    # for key, value in article.model_dump(exclude_unset=True).items():
+    #     setattr(current_user, key, value)
 
     if article.title:
         db_article.slug = slugify(article.title)
+        db_article.title = article.title
+
+    if article.description:
+        db_article.description = article.description
+    if article.body:
+        db_article.body = article.body
 
     # ISSUE: just adding new tags, not updated older.
-    if article.tag_list is not None:
+
+    if article.tag_list:
+
         for tag in article.tag_list:
             tags_to_link = session.scalar(
                 select(TagArticle).where(
@@ -386,13 +394,17 @@ def update_article(
             session.commit()
             session.refresh(tag)
 
+        # db_article.tag_list = article.tag_list
+
+    tag_article = session.scalars(
+        select(TagArticle).where(TagArticle.article_slug == article_slug)
+    ).all()
+
+    db_article.tag_list = tag_article
+
     session.add(db_article)
     session.commit()
     session.refresh(db_article)
-
-    tags = []
-    for tag in db_article.tag_list:
-        tags.append(tag.tag_name)
 
     checking_following_author = session.scalar(
         select(Follow).where(
@@ -419,6 +431,10 @@ def update_article(
     article_favorite = session.scalars(
         select(Favorites).where(Favorites.article_slug == db_article.slug)
     ).all()
+
+    tags = []
+    for tag in db_article.tag_list:
+        tags.append(tag.tag_name)
 
     profile = Profile(
         username=current_user.username,
