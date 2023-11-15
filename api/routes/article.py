@@ -457,3 +457,16 @@ def update_article(
     )
 
     return article_response
+
+
+# @router.post('{article_slug}/comments', response_model=CommentSchema, status_code=201)
+# def post_comment(article_slug: str, session: Session, current_user: CurrentUser):
+#
+#     db_article = session.scalar(
+#         select(Article).where(
+#             Article.slug == article_slug, Article.user_id == current_user.id
+#         )
+#     )
+#
+#     if db_article is None:
+#         raise HTTPException(status_code=404, detail='Article not found')

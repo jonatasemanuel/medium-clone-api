@@ -105,3 +105,13 @@ class Favorited(Base):
     articles: Mapped[List['Favorites']] = relationship(
         back_populates='favorited'
     )
+
+
+# class Comments(Base):
+#     __tablename__ = 'comment_association'
+#
+#     id: Mapped[int] = mapped_column(default=None, primary_key=True)
+#     body: Mapped[str]
+#     article_slug: Mapped[str] = mapped_column(
+#         ForeignKey('articles.slug'), primary_key=True
+#     )
