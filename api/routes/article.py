@@ -10,6 +10,7 @@ from api.db.models import Article, Favorites, Follow, TagArticle, User
 from api.db.schemas import (
     ArticleInput,
     ArticleSchema,
+    ArticleUpdate,
     Message,
     MultArticle,
     Profile,
@@ -22,7 +23,7 @@ router = APIRouter(prefix='/api/articles', tags=['articles'])
 Session = Annotated[Session, Depends(get_session)]
 
 
-@router.post('/', response_model=ArticleSchema, status_code=201)
+@router.post('/', status_code=201)
 def create_article(
     article: ArticleInput,
     current_user: CurrentUser,
@@ -90,7 +91,7 @@ def create_article(
         updated_at=db_article.updated_at,
         author=author_profile,
         favorited=False,
-        favorites_count=0
+        favorites_count=0,
     )
 
     return article_response
@@ -104,7 +105,7 @@ def get_articles(
     author: str = Query(None),
     favorited: str = Query(None),
     offset: Optional[int] = 0,
-    limit: Optional[int] = 20
+    limit: Optional[int] = 20,
 ):
     query = select(Article)
 
@@ -232,7 +233,7 @@ def get_feed(session: Session, current_user: CurrentUser):
             email=author_name.email,
             following=True,
         )
-        article_response: ArticleSchemaFavorite = ArticleSchemaFavorite(
+        article_response: PublicArticleSchema = PublicArticleSchema(
             slug=article.slug,
             title=article.title,
             description=article.description,
@@ -284,7 +285,7 @@ def get_article(slug: str, session: Session):
         updated_at=article_user.updated_at,
         author=profile,
         favorites_count=article_favorite.__len__(),
-        favorited=False
+        favorited=False,
     )
 
     return article_response
@@ -339,3 +340,133 @@ def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
 
     # Return Article
     return {'detail': 'Unfavorited'}
+
+
+@router.patch(
+    '/{article_slug}', response_model=PublicArticleSchema, status_code=200
+)
+def update_article(
+    article_slug: str,
+    article: ArticleUpdate,
+    session: Session,
+    current_user: CurrentUser,
+):
+    db_article = session.scalar(
+        select(Article).where(
+            Article.slug == article_slug, Article.user_id == current_user.id
+        )
+    )
+
+    if db_article is None:
+        raise HTTPException(status_code=404, detail='Article not found')
+
+    # for key, value in article.model_dump(exclude_unset=True).items():
+    #     setattr(current_user, key, value)
+
+    if article.title:
+        db_article.slug = slugify(article.title)
+        db_article.title = article.title
+
+    if article.description:
+        db_article.description = article.description
+    if article.body:
+        db_article.body = article.body
+
+    # ISSUE: just adding new tags, not updated older.
+
+    if article.tag_list:
+
+        for tag in article.tag_list:
+            tags_to_link = session.scalar(
+                select(TagArticle).where(
+                    TagArticle.tag_name == tag,
+                    TagArticle.article_slug == article_slug,
+                )
+            )
+            if tags_to_link:
+                raise HTTPException(
+                    status_code=400, detail=f"Tag '{tag}' is duplicated"
+                )
+
+            tag = TagArticle(article_slug=article_slug, tag_name=slugify(tag))
+
+            session.add(tag)
+            session.commit()
+            session.refresh(tag)
+
+        # db_article.tag_list = article.tag_list
+
+    tag_article = session.scalars(
+        select(TagArticle).where(TagArticle.article_slug == article_slug)
+    ).all()
+
+    db_article.tag_list = tag_article
+
+    session.add(db_article)
+    session.commit()
+    session.refresh(db_article)
+
+    checking_following_author = session.scalar(
+        select(Follow).where(
+            Follow.following_id == db_article.user_id,
+            Follow.user_id == current_user.id,
+        )
+    )
+
+    following = False
+    if checking_following_author:
+        following = True
+
+    check_user_favorite = session.scalar(
+        select(Favorites).where(
+            Favorites.favorited_by_user == current_user.username,
+            Favorites.article_slug == db_article.slug,
+        )
+    )
+
+    favorited = False
+    if check_user_favorite:
+        favorited = True
+
+    article_favorite = session.scalars(
+        select(Favorites).where(Favorites.article_slug == db_article.slug)
+    ).all()
+
+    tags = []
+    for tag in db_article.tag_list:
+        tags.append(tag.tag_name)
+
+    profile = Profile(
+        username=current_user.username,
+        bio=current_user.bio,
+        image=current_user.image,
+        email=current_user.email,
+        following=following,
+    )
+    article_response: PublicArticleSchema = PublicArticleSchema(
+        slug=db_article.slug,
+        title=db_article.title,
+        description=db_article.description,
+        body=db_article.body,
+        tag_list=tags,
+        created_at=db_article.created_at,
+        updated_at=db_article.updated_at,
+        author=profile,
+        favorites_count=article_favorite.__len__(),
+        favorited=favorited,
+    )
+
+    return article_response
+
+
+# @router.post('{article_slug}/comments', response_model=CommentSchema, status_code=201)
+# def post_comment(article_slug: str, session: Session, current_user: CurrentUser):
+#
+#     db_article = session.scalar(
+#         select(Article).where(
+#             Article.slug == article_slug, Article.user_id == current_user.id
+#         )
+#     )
+#
+#     if db_article is None:
+#         raise HTTPException(status_code=404, detail='Article not found')
