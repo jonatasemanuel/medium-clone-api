@@ -502,6 +502,5 @@ def delete_article(article_slug: str,  session: Session, current_user: CurrentUs
 #             Article.slug == article_slug, Article.user_id == current_user.id
 #         )
 #     )
-#
 #     if db_article is None:
 #         raise HTTPException(status_code=404, detail='Article not found')
