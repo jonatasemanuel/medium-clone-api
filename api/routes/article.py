@@ -459,6 +459,41 @@ def update_article(
     return article_response
 
 
+# @router.delete('/{article_slug}', response_model=Message, status_code=200)
+# def delete_article(article_slug: str,  session: Session, current_user: CurrentUser):
+#     db_article = session.scalar(
+#         select(Article).where(
+#             Article.slug == article_slug, Article.user_id == current_user.id
+#         )
+#     )
+#     if db_article is None:
+#         raise HTTPException(status_code=404, detail='Article not found')
+#
+#     article_to_favorite = session.scalar(
+#         select(Favorites).where(
+#             Favorites.favorited_by_user == current_user.username,
+#             Favorites.article_slug == article_slug
+#         )
+#     )
+#     if article_to_favorite:
+#         session.delete(article_to_favorite)
+#         session.commit()
+#         session.refresh(article_to_favorite)
+#
+#     tags = session.scalars(
+#         select(TagArticle).where(TagArticle.article_slug == article_slug)
+#     ).all()
+#     if tags:
+#         session.delete(tags)
+#         session.commit()
+#         session.refresh(tags)
+#
+#     session.delete(db_article)
+#     session.commit()
+#
+#     return {'Detail': 'Article deleted'}
+#
+#
 # @router.post('{article_slug}/comments', response_model=CommentSchema, status_code=201)
 # def post_comment(article_slug: str, session: Session, current_user: CurrentUser):
 #
