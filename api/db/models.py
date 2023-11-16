@@ -73,6 +73,8 @@ class Article(Base):
     )
     author: Mapped[User] = relationship(back_populates='articles')
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    comments: Mapped[List['PostComment']] = relationship(
+        back_populates='articles')
 
 
 class Tag(Base):
@@ -107,11 +109,14 @@ class Favorited(Base):
     )
 
 
-# class Comments(Base):
-#     __tablename__ = 'comment_association'
-#
-#     id: Mapped[int] = mapped_column(default=None, primary_key=True)
-#     body: Mapped[str]
-#     article_slug: Mapped[str] = mapped_column(
-#         ForeignKey('articles.slug'), primary_key=True
-#     )
+class Comment(Base):
+    __tablename__ = 'comments'
+
+    id: Mapped[int] = mapped_column(default=None, primary_key=True)
+    body: Mapped[str]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(onupdate=func.now())
+    article_slug: Mapped[str] = mapped_column(
+        ForeignKey('articles.slug'), primary_key=True
+    )
+    author: Mapped[int] = mapped_column(ForeignKey('users.id'))

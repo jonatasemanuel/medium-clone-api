@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from api.db.database import get_session
-from api.db.models import Article, Favorites, Follow, TagArticle, User
+from api.db.models import Article, Favorites, Follow, TagArticle, User, Comment
 from api.db.schemas import (
     ArticleInput,
     ArticleSchema,
@@ -500,13 +500,29 @@ def delete_article(article_slug: str,  session: Session, current_user: CurrentUs
     return {'detail': 'Article deleted'}
 
 
-# @router.post('{article_slug}/comments', response_model=CommentSchema, status_code=201)
-# def post_comment(article_slug: str, session: Session, current_user: CurrentUser):
-#
-#     db_article = session.scalar(
-#         select(Article).where(
-#             Article.slug == article_slug, Article.user_id == current_user.id
-#         )
-#     )
-#     if db_article is None:
-#         raise HTTPException(status_code=404, detail='Article not found')
+@router.post(
+    '{article_slug}/comments', response_model=CommentSchema, status_code=201
+)
+def post_comment(
+    article_slug: str,
+    body: str,
+    session: Session,
+    current_user: CurrentUser
+):
+
+    db_article = session.scalar(
+        select(Article).where(
+            Article.slug == article_slug, Article.user_id == current_user.id
+        )
+    )
+    if db_article is None:
+        raise HTTPException(status_code=404, detail='Article not found')
+
+    comment: Comment = Comment(
+        body=body, article_slug=article_slug
+    )
+
+    session.add(comment)
+    session.commit()
+
+    return comment
