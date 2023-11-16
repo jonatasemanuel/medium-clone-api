@@ -63,7 +63,6 @@ def create_article(
 
             session.add(tag)
             session.commit()
-            session.refresh(tag)
 
     tags = session.scalars(
         select(TagArticle).where(TagArticle.article_slug == slug)
@@ -73,7 +72,6 @@ def create_article(
 
     session.add(db_article)
     session.commit()
-    session.refresh(db_article)
 
     author_profile = get_profile(
         username=db_article.author.username,
@@ -375,6 +373,14 @@ def update_article(
     # ISSUE: just adding new tags, not updated older.
 
     if article.tag_list:
+
+        tag_article = session.scalars(
+            select(TagArticle).where(TagArticle.article_slug == article_slug)
+        ).all()
+        if tag_article:
+            for tag in tag_article:
+                session.delete(tag)
+                session.commit()
 
         for tag in article.tag_list:
             tags_to_link = session.scalar(
