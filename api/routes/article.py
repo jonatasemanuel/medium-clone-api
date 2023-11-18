@@ -529,7 +529,7 @@ def post_comment(
     post_comment: PostComment = PostComment(
         article_slug=article_slug,
         comment_id=comment.id,
-        user_id=current_user.id
+        author=current_user
     )
 
     session.add(post_comment)
