@@ -6,16 +6,16 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from api.db.database import get_session
-from api.db.models import Article, Favorites, Follow, TagArticle, User, Comment
-from api.db.schemas import (
-    ArticleInput,
-    ArticleSchema,
-    ArticleUpdate,
-    Message,
-    MultArticle,
-    Profile,
-    PublicArticleSchema,
-)
+from api.db.models import (Article, Favorites, Follow,
+                           TagArticle, User, PostComment, Comment)
+from api.db.schemas import (CommentSchema,
+                            ArticleUpdate,
+                            ArticleInput,
+                            Message,
+                            MultArticle,
+                            Profile,
+                            PublicArticleSchema,
+                            )
 from api.routes.user import CurrentUser, get_profile
 from api.security import get_current_user_optional
 
@@ -501,11 +501,11 @@ def delete_article(article_slug: str,  session: Session, current_user: CurrentUs
 
 
 @router.post(
-    '{article_slug}/comments', response_model=CommentSchema, status_code=201
+    '/{article_slug}/comments', status_code=201
 )
 def post_comment(
     article_slug: str,
-    body: str,
+    body: CommentSchema,
     session: Session,
     current_user: CurrentUser
 ):
@@ -519,10 +519,20 @@ def post_comment(
         raise HTTPException(status_code=404, detail='Article not found')
 
     comment: Comment = Comment(
-        body=body, article_slug=article_slug
+        body=body.body,
+        created_at=func.now(),
+        updated_at=func.now()
     )
-
     session.add(comment)
     session.commit()
 
-    return comment
+    post_comment: PostComment = PostComment(
+        article_slug=article_slug,
+        comment_id=comment.id,
+        user_id=current_user.id
+    )
+
+    session.add(post_comment)
+    session.commit()
+
+    return {'comment': comment.body}
