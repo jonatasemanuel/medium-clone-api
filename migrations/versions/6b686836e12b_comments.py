@@ -1,8 +1,8 @@
 """comments
 
-Revision ID: ddb9129e7df4
+Revision ID: 6b686836e12b
 Revises: 
-Create Date: 2023-11-17 00:14:27.714880
+Create Date: 2023-11-18 16:36:35.456288
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'ddb9129e7df4'
+revision: str = '6b686836e12b'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -75,7 +75,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['article_slug'], ['articles.slug'], ),
     sa.ForeignKeyConstraint(['comment_id'], ['comments.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('article_slug')
+    sa.PrimaryKeyConstraint('article_slug', 'comment_id')
     )
     op.create_table('favorite_association',
     sa.Column('article_slug', sa.String(), nullable=False),

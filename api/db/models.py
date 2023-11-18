@@ -128,10 +128,11 @@ class PostComment(Base):
     article_slug: Mapped[str] = mapped_column(
         ForeignKey('articles.slug'), primary_key=True
     )
-    article: Mapped[Article] = relationship(back_populates='comments')
+    article: Mapped['Article'] = relationship(back_populates='comments')
 
-    comment_id: Mapped[int] = mapped_column(ForeignKey('comments.id'))
-    comment: Mapped[Comment] = relationship(back_populates='comments')
+    comment_id: Mapped[int] = mapped_column(
+        ForeignKey('comments.id'), primary_key=True)
+    comment: Mapped['Comment'] = relationship(back_populates='comments')
 
-    author: Mapped[User] = relationship(back_populates='comments')
+    author: Mapped['User'] = relationship(back_populates='comments')
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
