@@ -536,3 +536,23 @@ def post_comment(
     session.commit()
 
     return {'comment': comment.body}
+
+
+@router.get('/{slug}/comments', status_code=200)
+def get_comments(slug: str, session: Session, current_user: CurrentUser):
+    db_article = session.scalar(
+        select(Article).where(
+            Article.slug == slug
+        )
+    )
+    if db_article is None:
+        raise HTTPException(status_code=404, detail='Article not found')
+
+    comments_article = session.scalars(
+        select(Comment).where(
+            Comment.id == PostComment.comment_id,
+            PostComment.article_slug == slug
+        )
+    ).all()
+
+    return {'comments': comments_article}
