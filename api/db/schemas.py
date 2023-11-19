@@ -63,6 +63,10 @@ class TagSchema(CustomBaseModel):
     name: str
 
 
+class CommentSchema(CustomBaseModel):
+    body: str
+
+
 class ArticleUpdate(CustomBaseModel):
     title: str | None = None
     description: str | None = None

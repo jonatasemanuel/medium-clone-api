@@ -6,16 +6,16 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from api.db.database import get_session
-from api.db.models import Article, Favorites, Follow, TagArticle, User
-from api.db.schemas import (
-    ArticleInput,
-    ArticleSchema,
-    ArticleUpdate,
-    Message,
-    MultArticle,
-    Profile,
-    PublicArticleSchema,
-)
+from api.db.models import (Article, Favorites, Follow,
+                           TagArticle, User, PostComment, Comment)
+from api.db.schemas import (CommentSchema,
+                            ArticleUpdate,
+                            ArticleInput,
+                            Message,
+                            MultArticle,
+                            Profile,
+                            PublicArticleSchema,
+                            )
 from api.routes.user import CurrentUser, get_profile
 from api.security import get_current_user_optional
 
@@ -63,7 +63,6 @@ def create_article(
 
             session.add(tag)
             session.commit()
-            session.refresh(tag)
 
     tags = session.scalars(
         select(TagArticle).where(TagArticle.article_slug == slug)
@@ -73,7 +72,6 @@ def create_article(
 
     session.add(db_article)
     session.commit()
-    session.refresh(db_article)
 
     author_profile = get_profile(
         username=db_article.author.username,
@@ -376,6 +374,14 @@ def update_article(
 
     if article.tag_list:
 
+        tag_article = session.scalars(
+            select(TagArticle).where(TagArticle.article_slug == article_slug)
+        ).all()
+        if tag_article:
+            for tag in tag_article:
+                session.delete(tag)
+                session.commit()
+
         for tag in article.tag_list:
             tags_to_link = session.scalar(
                 select(TagArticle).where(
@@ -459,49 +465,74 @@ def update_article(
     return article_response
 
 
-# @router.delete('/{article_slug}', response_model=Message, status_code=200)
-# def delete_article(article_slug: str,  session: Session, current_user: CurrentUser):
-#     db_article = session.scalar(
-#         select(Article).where(
-#             Article.slug == article_slug, Article.user_id == current_user.id
-#         )
-#     )
-#     if db_article is None:
-#         raise HTTPException(status_code=404, detail='Article not found')
-#
-#     article_to_favorite = session.scalar(
-#         select(Favorites).where(
-#             Favorites.favorited_by_user == current_user.username,
-#             Favorites.article_slug == article_slug
-#         )
-#     )
-#     if article_to_favorite:
-#         session.delete(article_to_favorite)
-#         session.commit()
-#         session.refresh(article_to_favorite)
-#
-#     tags = session.scalars(
-#         select(TagArticle).where(TagArticle.article_slug == article_slug)
-#     ).all()
-#     if tags:
-#         session.delete(tags)
-#         session.commit()
-#         session.refresh(tags)
-#
-#     session.delete(db_article)
-#     session.commit()
-#
-#     return {'Detail': 'Article deleted'}
-#
-#
-# @router.post('{article_slug}/comments', response_model=CommentSchema, status_code=201)
-# def post_comment(article_slug: str, session: Session, current_user: CurrentUser):
-#
-#     db_article = session.scalar(
-#         select(Article).where(
-#             Article.slug == article_slug, Article.user_id == current_user.id
-#         )
-#     )
-#
-#     if db_article is None:
-#         raise HTTPException(status_code=404, detail='Article not found')
+@router.delete('/{article_slug}', response_model=Message, status_code=200)
+def delete_article(article_slug: str,  session: Session, current_user: CurrentUser):
+    db_article = session.scalar(
+        select(Article).where(
+            Article.slug == article_slug, Article.user_id == current_user.id
+        )
+    )
+    if db_article is None:
+        raise HTTPException(status_code=404, detail='Article not found')
+
+    article_to_favorite = session.scalar(
+        select(Favorites).where(
+            Favorites.favorited_by_user == current_user.username,
+            Favorites.article_slug == article_slug
+        )
+    )
+    if article_to_favorite:
+        session.delete(article_to_favorite)
+        session.commit()
+        session.refresh(article_to_favorite)
+
+    tags = session.scalars(
+        select(TagArticle).where(TagArticle.article_slug == article_slug)
+    ).all()
+    if tags:
+        for tag in tags:
+            session.delete(tag)
+            session.commit()
+
+    session.delete(db_article)
+    session.commit()
+
+    return {'detail': 'Article deleted'}
+
+
+@router.post(
+    '/{article_slug}/comments', status_code=201
+)
+def post_comment(
+    article_slug: str,
+    body: CommentSchema,
+    session: Session,
+    current_user: CurrentUser
+):
+
+    db_article = session.scalar(
+        select(Article).where(
+            Article.slug == article_slug, Article.user_id == current_user.id
+        )
+    )
+    if db_article is None:
+        raise HTTPException(status_code=404, detail='Article not found')
+
+    comment: Comment = Comment(
+        body=body.body,
+        created_at=func.now(),
+        updated_at=func.now()
+    )
+    session.add(comment)
+    session.commit()
+
+    post_comment: PostComment = PostComment(
+        article_slug=article_slug,
+        comment_id=comment.id,
+        user_id=current_user.id
+    )
+
+    session.add(post_comment)
+    session.commit()
+
+    return {'comment': comment.body}
