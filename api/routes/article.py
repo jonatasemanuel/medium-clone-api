@@ -512,7 +512,7 @@ def post_comment(
 
     db_article = session.scalar(
         select(Article).where(
-            Article.slug == article_slug, Article.user_id == current_user.id
+            Article.slug == article_slug
         )
     )
     if db_article is None:
@@ -521,7 +521,8 @@ def post_comment(
     comment: Comment = Comment(
         body=body.body,
         created_at=func.now(),
-        updated_at=func.now()
+        updated_at=func.now(),
+        author=current_user
     )
     session.add(comment)
     session.commit()
@@ -529,10 +530,29 @@ def post_comment(
     post_comment: PostComment = PostComment(
         article_slug=article_slug,
         comment_id=comment.id,
-        user_id=current_user.id
     )
 
     session.add(post_comment)
     session.commit()
 
     return {'comment': comment.body}
+
+
+@router.get('/{slug}/comments', status_code=200)
+def get_comments(slug: str, session: Session, current_user: CurrentUser):
+    db_article = session.scalar(
+        select(Article).where(
+            Article.slug == slug
+        )
+    )
+    if db_article is None:
+        raise HTTPException(status_code=404, detail='Article not found')
+
+    comments_article = session.scalars(
+        select(Comment).where(
+            Comment.id == PostComment.comment_id,
+            PostComment.article_slug == slug
+        )
+    ).all()
+
+    return {'comments': comments_article}

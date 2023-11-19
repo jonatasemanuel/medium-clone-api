@@ -34,7 +34,7 @@ class User(Base):
     image: Mapped[Optional[str]]
     following: Mapped[List['Follow']] = relationship(back_populates='user')
     articles: Mapped[List['Article']] = relationship(back_populates='author')
-    comments: Mapped[List['PostComment']] = relationship(
+    comments: Mapped[List['Comment']] = relationship(
         back_populates='author')
 
 
@@ -121,6 +121,8 @@ class Comment(Base):
     updated_at: Mapped[datetime] = mapped_column(onupdate=func.now())
     comments: Mapped[List['PostComment']] = relationship(
         back_populates='comment')
+    author: Mapped['User'] = relationship(back_populates='comments')
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
 
 
 class PostComment(Base):
@@ -128,10 +130,8 @@ class PostComment(Base):
     article_slug: Mapped[str] = mapped_column(
         ForeignKey('articles.slug'), primary_key=True
     )
-    article: Mapped[Article] = relationship(back_populates='comments')
+    article: Mapped['Article'] = relationship(back_populates='comments')
 
-    comment_id: Mapped[int] = mapped_column(ForeignKey('comments.id'))
-    comment: Mapped[Comment] = relationship(back_populates='comments')
-
-    author: Mapped[User] = relationship(back_populates='comments')
-    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    comment_id: Mapped[int] = mapped_column(
+        ForeignKey('comments.id'), primary_key=True)
+    comment: Mapped['Comment'] = relationship(back_populates='comments')
