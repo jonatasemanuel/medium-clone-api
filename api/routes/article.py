@@ -556,3 +556,30 @@ def get_comments(slug: str, session: Session, current_user: CurrentUser):
     ).all()
 
     return {'comments': comments_article}
+
+
+@router.delete('/{slug}/comments/{id}', status_code=200)
+def delete_comment(slug: str, id: int, session: Session, current_user: CurrentUser):
+    db_article = session.scalar(
+        select(Article).where(
+            Article.slug == slug
+        )
+    )
+    if db_article is None:
+        raise HTTPException(status_code=404, detail='Article not found')
+
+    comment_association = session.scalar(
+        select(PostComment).where(
+            PostComment.comment_id == id
+        )
+    )
+    session.delete(comment_association)
+
+    comment_article = session.scalar(
+        select(Comment).where(Comment.id == id)
+    )
+
+    session.delete(comment_article)
+    session.commit()
+
+    return {'detail': 'Comment removed'}
