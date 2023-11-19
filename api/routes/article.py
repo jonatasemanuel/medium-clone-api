@@ -512,7 +512,7 @@ def post_comment(
 
     db_article = session.scalar(
         select(Article).where(
-            Article.slug == article_slug, Article.user_id == current_user.id
+            Article.slug == article_slug
         )
     )
     if db_article is None:
@@ -521,7 +521,8 @@ def post_comment(
     comment: Comment = Comment(
         body=body.body,
         created_at=func.now(),
-        updated_at=func.now()
+        updated_at=func.now(),
+        author=current_user
     )
     session.add(comment)
     session.commit()
@@ -529,7 +530,6 @@ def post_comment(
     post_comment: PostComment = PostComment(
         article_slug=article_slug,
         comment_id=comment.id,
-        author=current_user
     )
 
     session.add(post_comment)
