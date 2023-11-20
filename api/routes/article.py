@@ -28,11 +28,11 @@ from api.db.schemas import (
 from api.routes.user import CurrentUser, get_profile
 from api.security import get_current_user_optional
 
-router = APIRouter(prefix='/api/articles', tags=['articles'])
+router = APIRouter(prefix="/api/articles", tags=["articles"])
 Session = Annotated[Session, Depends(get_session)]
 
 
-@router.post('/', status_code=201)
+@router.post("/", status_code=201)
 def create_article(
     article: ArticleInput,
     current_user: CurrentUser,
@@ -43,7 +43,7 @@ def create_article(
     article_name = session.scalar(select(Article).where(Article.slug == slug))
     if article_name:
         raise HTTPException(
-            status_code=400, detail='Article title already used'
+            status_code=400, detail="Article title already used"
         )
 
     db_article: Article = Article(
@@ -106,7 +106,7 @@ def create_article(
     return article_response
 
 
-@router.get('/', response_model=MultArticle, status_code=200)
+@router.get("/", response_model=MultArticle, status_code=200)
 def get_articles(
     session: Session,
     current_user: Optional[User] = Depends(get_current_user_optional),
@@ -150,7 +150,6 @@ def get_articles(
         ).all()
 
         if current_user:
-
             checking_following_author = session.scalar(
                 select(Follow).where(
                     Follow.following_id == article.user_id,
@@ -194,12 +193,11 @@ def get_articles(
 
     articles_count = articles_list.__len__()
 
-    return {'articles': articles_list, 'articles_count': articles_count}
+    return {"articles": articles_list, "articles_count": articles_count}
 
 
-@router.get('/feed', response_model=MultArticle, status_code=200)
+@router.get("/feed", response_model=MultArticle, status_code=200)
 def get_feed(session: Session, current_user: CurrentUser):
-
     feed = session.scalars(
         select(Article)
         .where(
@@ -259,12 +257,11 @@ def get_feed(session: Session, current_user: CurrentUser):
 
     articles_count = articles_list.__len__()
 
-    return {'articles': articles_list, 'articles_count': articles_count}
+    return {"articles": articles_list, "articles_count": articles_count}
 
 
-@router.get('/{slug}', status_code=200)
+@router.get("/{slug}", status_code=200)
 def get_article(slug: str, session: Session):
-
     article_user = session.scalar(select(Article).where(Article.slug == slug))
 
     following = False
@@ -301,26 +298,27 @@ def get_article(slug: str, session: Session):
 
 
 @router.post(
-    '/{slug}/favorite', response_model=PublicArticleSchema, status_code=201
+    "/{slug}/favorite", response_model=PublicArticleSchema, status_code=201
 )
 def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
-        raise HTTPException(status_code=404, detail='Article not exist')
-
+        raise HTTPException(status_code=404, detail="Article not exist")
     article_to_favorite = session.scalar(
         select(Favorites).where(
             Favorites.favorited_by_user == current_user.username,
-            Favorites.article_slug == article.slug,
+            Favorites.article_id == article.id,
         )
     )
 
     if article_to_favorite:
         raise HTTPException(
-            status_code=400, detail='Article already favorited'
+            status_code=400, detail="Article already favorited"
         )
     favorite: Favorites = Favorites(
-        article_slug=slug, favorited_by_user=current_user.username
+        article_slug=slug,
+        favorited_by_user=current_user.username,
+        article_id=article.id,
     )
 
     session.add(favorite)
@@ -344,12 +342,12 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
 
 
 @router.delete(
-    '/{slug}/favorite', response_model=PublicArticleSchema, status_code=201
+    "/{slug}/favorite", response_model=PublicArticleSchema, status_code=201
 )
 def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
-        raise HTTPException(status_code=404, detail='Article not exist')
+        raise HTTPException(status_code=404, detail="Article not exist")
 
     article_to_unfavorite = session.scalar(
         select(Favorites).where(
@@ -358,7 +356,7 @@ def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
         )
     )
     if not article_to_unfavorite:
-        raise HTTPException(status_code=400, detail='Article is not favorited')
+        raise HTTPException(status_code=400, detail="Article is not favorited")
 
     session.delete(article_to_unfavorite)
     session.commit()
@@ -379,7 +377,7 @@ def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
 
 
 @router.patch(
-    '/{article_slug}', response_model=PublicArticleSchema, status_code=200
+    "/{article_slug}", response_model=PublicArticleSchema, status_code=200
 )
 def update_article(
     article_slug: str,
@@ -394,7 +392,7 @@ def update_article(
     )
 
     if db_article is None:
-        raise HTTPException(status_code=404, detail='Article not found')
+        raise HTTPException(status_code=404, detail="Article not found")
 
     # for key, value in article.model_dump(exclude_unset=True).items():
     #     setattr(current_user, key, value)
@@ -411,7 +409,6 @@ def update_article(
     # ISSUE: just adding new tags, not updated older.
 
     if article.tag_list:
-
         tag_article = session.scalars(
             select(TagArticle).where(TagArticle.article_slug == article_slug)
         ).all()
@@ -503,7 +500,7 @@ def update_article(
     return article_response
 
 
-@router.delete('/{article_slug}', response_model=Message, status_code=200)
+@router.delete("/{article_slug}", response_model=Message, status_code=200)
 def delete_article(
     article_slug: str, session: Session, current_user: CurrentUser
 ):
@@ -513,7 +510,7 @@ def delete_article(
         )
     )
     if db_article is None:
-        raise HTTPException(status_code=404, detail='Article not found')
+        raise HTTPException(status_code=404, detail="Article not found")
 
     comments_article = session.scalars(
         select(Comment).where(
@@ -529,22 +526,21 @@ def delete_article(
     session.delete(db_article)
     session.commit()
 
-    return {'detail': 'Article deleted'}
+    return {"detail": "Article deleted"}
 
 
-@router.post('/{article_slug}/comments', status_code=201)
+@router.post("/{article_slug}/comments", status_code=201)
 def post_comment(
     article_slug: str,
     body: CommentSchema,
     session: Session,
     current_user: CurrentUser,
 ):
-
     db_article = session.scalar(
         select(Article).where(Article.slug == article_slug)
     )
     if db_article is None:
-        raise HTTPException(status_code=404, detail='Article not found')
+        raise HTTPException(status_code=404, detail="Article not found")
 
     comment: Comment = Comment(
         body=body.body,
@@ -563,14 +559,14 @@ def post_comment(
     session.add(post_comment)
     session.commit()
 
-    return {'comment': comment.body}
+    return {"comment": comment.body}
 
 
-@router.get('/{slug}/comments', status_code=200)
+@router.get("/{slug}/comments", status_code=200)
 def get_comments(slug: str, session: Session, current_user: CurrentUser):
     db_article = session.scalar(select(Article).where(Article.slug == slug))
     if db_article is None:
-        raise HTTPException(status_code=404, detail='Article not found')
+        raise HTTPException(status_code=404, detail="Article not found")
 
     comments_article = session.scalars(
         select(Comment).where(
@@ -579,16 +575,16 @@ def get_comments(slug: str, session: Session, current_user: CurrentUser):
         )
     ).all()
 
-    return {'comments': comments_article}
+    return {"comments": comments_article}
 
 
-@router.delete('/{slug}/comments/{id}', status_code=200)
+@router.delete("/{slug}/comments/{id}", status_code=200)
 def delete_comment(
     slug: str, id: int, session: Session, current_user: CurrentUser
 ):
     db_article = session.scalar(select(Article).where(Article.slug == slug))
     if db_article is None:
-        raise HTTPException(status_code=404, detail='Article not found')
+        raise HTTPException(status_code=404, detail="Article not found")
 
     comment_association = session.scalar(
         select(PostComment).where(PostComment.comment_id == id)
@@ -600,4 +596,4 @@ def delete_comment(
     session.delete(comment_article)
     session.commit()
 
-    return {'detail': 'Comment removed'}
+    return {"detail": "Comment removed"}

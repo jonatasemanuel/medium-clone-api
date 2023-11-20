@@ -1,8 +1,8 @@
-"""articles id
+"""favorite by id
 
-Revision ID: 54482b80f35f
+Revision ID: eebcfd6f85ff
 Revises: 
-Create Date: 2023-11-20 16:49:40.289051
+Create Date: 2023-11-20 18:26:27.217604
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '54482b80f35f'
+revision: str = 'eebcfd6f85ff'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -81,6 +81,7 @@ def upgrade() -> None:
     op.create_table('favorite_association',
     sa.Column('article_slug', sa.String(), nullable=False),
     sa.Column('favorited_by_user', sa.String(), nullable=False),
+    sa.Column('article_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['article_slug'], ['articles.slug'], ),
     sa.ForeignKeyConstraint(['favorited_by_user'], ['favorited.username'], ),
     sa.PrimaryKeyConstraint('article_slug', 'favorited_by_user')

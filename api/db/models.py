@@ -65,7 +65,7 @@ class TagArticle(Base):
 class Article(Base):
     __tablename__ = "articles"
 
-    id: Mapped[Optional[int]] = mapped_column(default=None, autoincrement=True)
+    id: Mapped[int] = mapped_column(default=True, autoincrement=True)
     slug: Mapped[str] = mapped_column(default=None, primary_key=True)
     title: Mapped[str]
     description: Mapped[str]
@@ -104,6 +104,7 @@ class Favorites(Base):
         ForeignKey("favorited.username"), primary_key=True
     )
 
+    article_id: Mapped[int]
     favorited: Mapped["Favorited"] = relationship(back_populates="articles")
 
     article: Mapped["Article"] = relationship(back_populates="favorited")
