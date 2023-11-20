@@ -4,7 +4,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.db.models import Tag, TagArticle
-from api.db.schemas import Tags
 from api.db.database import get_session
 
 router = APIRouter(prefix='/api/tags', tags=['tags'])
