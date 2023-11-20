@@ -16,6 +16,6 @@ def get_tags(
     offset: Optional[int] = 0,
     limit: Optional[int] = 20
 ):
-    db_tags = session.scalars(select(TagArticle.tag_name)).all()
+    db_tags = session.scalars(select(Tag.name)).all()
     tags = set(db_tags)
     return {'tags': tags}

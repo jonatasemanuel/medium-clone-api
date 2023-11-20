@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from api.db.database import get_session
 from api.db.models import (Article, Favorites, Follow,
-                           TagArticle, User, PostComment, Comment)
+                           TagArticle, User, PostComment, Comment, Tag)
 from api.db.schemas import (CommentSchema,
                             ArticleUpdate,
                             ArticleInput,
@@ -59,9 +59,12 @@ def create_article(
                     status_code=400, detail=f"Tag '{tag}' is duplicated"
                 )
 
-            tag = TagArticle(article_slug=slug, tag_name=slugify(tag))
+            tag_slug = slugify(tag)
 
-            session.add(tag)
+            tag = Tag(name=tag_slug)
+            tag_article = TagArticle(article_slug=slug, tag_name=tag_slug)
+
+            session.add_all([tag, tag_article])
             session.commit()
 
     tags = session.scalars(
