@@ -32,10 +32,15 @@ class User(Base):
     password: Mapped[str]
     bio: Mapped[Optional[str]]
     image: Mapped[Optional[str]]
-    following: Mapped[List['Follow']] = relationship(back_populates='user')
-    articles: Mapped[List['Article']] = relationship(back_populates='author')
+    following: Mapped[List['Follow']] = relationship(
+        back_populates='user', cascade='all, delete-orphan'
+    )
+    articles: Mapped[List['Article']] = relationship(
+        back_populates='author', cascade='all, delete-orphan'
+    )
     comments: Mapped[List['Comment']] = relationship(
-        back_populates='author')
+        back_populates='author', cascade='all, delete-orphan'
+    )
 
 
 class Following(Base):
@@ -68,15 +73,15 @@ class Article(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(onupdate=func.now())
     tag_list: Mapped[Optional[List['TagArticle']]] = relationship(
-        back_populates='articles'
+        back_populates='articles', cascade='all, delete-orphan'
     )
     favorited: Mapped[List['Favorites']] = relationship(
-        back_populates='article'
+        back_populates='article', cascade='all, delete-orphan'
     )
     author: Mapped[User] = relationship(back_populates='articles')
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     comments: Mapped[List['PostComment']] = relationship(
-        back_populates='article'
+        back_populates='article', cascade='all, delete-orphan'
     )
 
 
@@ -84,7 +89,9 @@ class Tag(Base):
     __tablename__ = 'tags'
 
     name: Mapped[str] = mapped_column(default=None, primary_key=True)
-    articles: Mapped[List['TagArticle']] = relationship(back_populates='tag')
+    articles: Mapped[List['TagArticle']] = relationship(
+        back_populates='tag', cascade='all, delete-orphan'
+    )
 
 
 class Favorites(Base):
@@ -108,7 +115,7 @@ class Favorited(Base):
     username: Mapped[str] = mapped_column(primary_key=True, index=True)
 
     articles: Mapped[List['Favorites']] = relationship(
-        back_populates='favorited'
+        back_populates='favorited', cascade='all, delete-orphan'
     )
 
 
@@ -120,7 +127,8 @@ class Comment(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(onupdate=func.now())
     comments: Mapped[List['PostComment']] = relationship(
-        back_populates='comment')
+        back_populates='comment', cascade='all, delete-orphan'
+    )
     author: Mapped['User'] = relationship(back_populates='comments')
     user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
 
@@ -133,5 +141,6 @@ class PostComment(Base):
     article: Mapped['Article'] = relationship(back_populates='comments')
 
     comment_id: Mapped[int] = mapped_column(
-        ForeignKey('comments.id'), primary_key=True)
+        ForeignKey('comments.id'), primary_key=True
+    )
     comment: Mapped['Comment'] = relationship(back_populates='comments')
