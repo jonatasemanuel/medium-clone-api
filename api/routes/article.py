@@ -300,7 +300,9 @@ def get_article(slug: str, session: Session):
     return article_response
 
 
-@router.post('/{slug}/favorite', status_code=201)
+@router.post(
+    '/{slug}/favorite', response_model=PublicArticleSchema, status_code=201
+)
 def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
@@ -325,11 +327,25 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     session.commit()
     session.refresh(favorite)
 
-    # Return Article
-    return {'favorite': favorite}
+    fav_article = get_article(slug, session)
+    fav_article.favorited = True
+
+    user_to_check = session.scalar(
+        select(Follow).where(
+            Follow.following_id == article.user_id,
+            Follow.user_id == current_user.id,
+        )
+    )
+
+    if user_to_check:
+        fav_article.author.following = True
+
+    return fav_article
 
 
-@router.delete('/{slug}/favorite', response_model=Message, status_code=201)
+@router.delete(
+    '/{slug}/favorite', response_model=PublicArticleSchema, status_code=201
+)
 def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
@@ -347,8 +363,19 @@ def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
     session.delete(article_to_unfavorite)
     session.commit()
 
-    # Return Article
-    return {'detail': 'Unfavorited'}
+    fav_article = get_article(slug, session)
+
+    user_to_check = session.scalar(
+        select(Follow).where(
+            Follow.following_id == article.user_id,
+            Follow.user_id == current_user.id,
+        )
+    )
+
+    if user_to_check:
+        fav_article.author.following = True
+
+    return fav_article
 
 
 @router.patch(
@@ -491,7 +518,9 @@ def delete_article(
     comments_article = session.scalars(
         select(Comment).where(
             PostComment.article_slug == article_slug,
-            Comment.id == PostComment.comment_id)).all()
+            Comment.id == PostComment.comment_id,
+        )
+    ).all()
     if comments_article:
         for comment in comments_article:
             session.delete(comment)
