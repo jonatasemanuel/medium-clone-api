@@ -146,11 +146,10 @@ def get_articles(
         favorited_article = False
 
         article_favorite = session.scalars(
-            select(Favorites).where(Favorites.article_slug == article.slug)
+            select(Favorites).where(Favorites.article_id == article.id)
         ).all()
 
         if current_user:
-
             checking_following_author = session.scalar(
                 select(Follow).where(
                     Follow.following_id == article.user_id,
@@ -160,7 +159,7 @@ def get_articles(
             article_to_favorite = session.scalar(
                 select(Favorites).where(
                     Favorites.favorited_by_user == current_user.username,
-                    Favorites.article_slug == article.slug,
+                    Favorites.article_id == article.id,
                 )
             )
 
@@ -199,7 +198,6 @@ def get_articles(
 
 @router.get('/feed', response_model=MultArticle, status_code=200)
 def get_feed(session: Session, current_user: CurrentUser):
-
     feed = session.scalars(
         select(Article)
         .where(
@@ -222,13 +220,13 @@ def get_feed(session: Session, current_user: CurrentUser):
         favorited = False
 
         article_favorite = session.scalars(
-            select(Favorites).where(Favorites.article_slug == article.slug)
+            select(Favorites).where(Favorites.article_id == article.id)
         ).all()
 
         check_user_favorite = session.scalar(
             select(Favorites).where(
                 Favorites.favorited_by_user == current_user.username,
-                Favorites.article_slug == article.slug,
+                Favorites.article_id == article.id,
             )
         )
 
@@ -264,13 +262,12 @@ def get_feed(session: Session, current_user: CurrentUser):
 
 @router.get('/{slug}', status_code=200)
 def get_article(slug: str, session: Session):
-
     article_user = session.scalar(select(Article).where(Article.slug == slug))
 
     following = False
 
     article_favorite = session.scalars(
-        select(Favorites).where(Favorites.article_slug == slug)
+        select(Favorites).where(Favorites.article_id == article_user.id)
     ).all()
 
     tags = []
@@ -307,11 +304,10 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
     article = session.scalar(select(Article).where(Article.slug == slug))
     if not article:
         raise HTTPException(status_code=404, detail='Article not exist')
-
     article_to_favorite = session.scalar(
         select(Favorites).where(
             Favorites.favorited_by_user == current_user.username,
-            Favorites.article_slug == article.slug,
+            Favorites.article_id == article.id,
         )
     )
 
@@ -320,7 +316,8 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
             status_code=400, detail='Article already favorited'
         )
     favorite: Favorites = Favorites(
-        article_slug=slug, favorited_by_user=current_user.username
+        favorited_by_user=current_user.username,
+        article_id=article.id,
     )
 
     session.add(favorite)
@@ -411,7 +408,6 @@ def update_article(
     # ISSUE: just adding new tags, not updated older.
 
     if article.tag_list:
-
         tag_article = session.scalars(
             select(TagArticle).where(TagArticle.article_slug == article_slug)
         ).all()
@@ -464,7 +460,7 @@ def update_article(
     check_user_favorite = session.scalar(
         select(Favorites).where(
             Favorites.favorited_by_user == current_user.username,
-            Favorites.article_slug == db_article.slug,
+            Favorites.article_id == db_article.id,
         )
     )
 
@@ -473,7 +469,7 @@ def update_article(
         favorited = True
 
     article_favorite = session.scalars(
-        select(Favorites).where(Favorites.article_slug == db_article.slug)
+        select(Favorites).where(Favorites.article_id == db_article.id)
     ).all()
 
     tags = []
@@ -539,7 +535,6 @@ def post_comment(
     session: Session,
     current_user: CurrentUser,
 ):
-
     db_article = session.scalar(
         select(Article).where(Article.slug == article_slug)
     )

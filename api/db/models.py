@@ -23,7 +23,6 @@ class Follow(Base):
 
 
 class User(Base):
-
     __tablename__ = 'users'
 
     id: Mapped[int] = mapped_column(default=None, primary_key=True)
@@ -66,6 +65,7 @@ class TagArticle(Base):
 class Article(Base):
     __tablename__ = 'articles'
 
+    id: Mapped[int] = mapped_column(default=True, autoincrement=True)
     slug: Mapped[str] = mapped_column(default=None, primary_key=True)
     title: Mapped[str]
     description: Mapped[str]
@@ -97,12 +97,16 @@ class Tag(Base):
 class Favorites(Base):
     __tablename__ = 'favorite_association'
 
-    article_slug: Mapped[str] = mapped_column(
-        ForeignKey('articles.slug'), primary_key=True
+    # article_slug: Mapped[str] = mapped_column(
+    #     ForeignKey("articles.slug"), primary_key=True
+    # )
+    article_id: Mapped[str] = mapped_column(
+        ForeignKey('articles.id'), primary_key=True
     )
     favorited_by_user: Mapped[str] = mapped_column(
         ForeignKey('favorited.username'), primary_key=True
     )
+    # article_id: Mapped[int]
 
     favorited: Mapped['Favorited'] = relationship(back_populates='articles')
 
