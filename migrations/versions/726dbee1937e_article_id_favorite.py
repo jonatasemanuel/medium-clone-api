@@ -1,8 +1,8 @@
-"""favorite by id
+"""article-id-favorite
 
-Revision ID: eebcfd6f85ff
+Revision ID: 726dbee1937e
 Revises: 
-Create Date: 2023-11-20 18:26:27.217604
+Create Date: 2023-11-20 22:22:50.177570
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'eebcfd6f85ff'
+revision: str = '726dbee1937e'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -44,7 +44,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('articles',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=True),
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('slug', sa.String(), nullable=False),
     sa.Column('title', sa.String(), nullable=False),
     sa.Column('description', sa.String(), nullable=False),
@@ -79,12 +79,11 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('article_slug', 'comment_id')
     )
     op.create_table('favorite_association',
-    sa.Column('article_slug', sa.String(), nullable=False),
-    sa.Column('favorited_by_user', sa.String(), nullable=False),
     sa.Column('article_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['article_slug'], ['articles.slug'], ),
+    sa.Column('favorited_by_user', sa.String(), nullable=False),
+    sa.ForeignKeyConstraint(['article_id'], ['articles.id'], ),
     sa.ForeignKeyConstraint(['favorited_by_user'], ['favorited.username'], ),
-    sa.PrimaryKeyConstraint('article_slug', 'favorited_by_user')
+    sa.PrimaryKeyConstraint('article_id', 'favorited_by_user')
     )
     op.create_table('tags_article',
     sa.Column('article_slug', sa.String(), nullable=False),

@@ -146,7 +146,7 @@ def get_articles(
         favorited_article = False
 
         article_favorite = session.scalars(
-            select(Favorites).where(Favorites.article_slug == article.slug)
+            select(Favorites).where(Favorites.article_id == article.id)
         ).all()
 
         if current_user:
@@ -159,7 +159,7 @@ def get_articles(
             article_to_favorite = session.scalar(
                 select(Favorites).where(
                     Favorites.favorited_by_user == current_user.username,
-                    Favorites.article_slug == article.slug,
+                    Favorites.article_id == article.id,
                 )
             )
 
@@ -220,13 +220,13 @@ def get_feed(session: Session, current_user: CurrentUser):
         favorited = False
 
         article_favorite = session.scalars(
-            select(Favorites).where(Favorites.article_slug == article.slug)
+            select(Favorites).where(Favorites.article_id == article.id)
         ).all()
 
         check_user_favorite = session.scalar(
             select(Favorites).where(
                 Favorites.favorited_by_user == current_user.username,
-                Favorites.article_slug == article.slug,
+                Favorites.article_id == article.id,
             )
         )
 
@@ -267,7 +267,7 @@ def get_article(slug: str, session: Session):
     following = False
 
     article_favorite = session.scalars(
-        select(Favorites).where(Favorites.article_slug == slug)
+        select(Favorites).where(Favorites.article_id == article_user.id)
     ).all()
 
     tags = []
@@ -316,7 +316,6 @@ def favorite_article(session: Session, current_user: CurrentUser, slug: str):
             status_code=400, detail="Article already favorited"
         )
     favorite: Favorites = Favorites(
-        article_slug=slug,
         favorited_by_user=current_user.username,
         article_id=article.id,
     )
@@ -461,7 +460,7 @@ def update_article(
     check_user_favorite = session.scalar(
         select(Favorites).where(
             Favorites.favorited_by_user == current_user.username,
-            Favorites.article_slug == db_article.slug,
+            Favorites.article_id == db_article.id,
         )
     )
 
@@ -470,7 +469,7 @@ def update_article(
         favorited = True
 
     article_favorite = session.scalars(
-        select(Favorites).where(Favorites.article_slug == db_article.slug)
+        select(Favorites).where(Favorites.article_id == db_article.id)
     ).all()
 
     tags = []

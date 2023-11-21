@@ -97,14 +97,17 @@ class Tag(Base):
 class Favorites(Base):
     __tablename__ = "favorite_association"
 
-    article_slug: Mapped[str] = mapped_column(
-        ForeignKey("articles.slug"), primary_key=True
+    # article_slug: Mapped[str] = mapped_column(
+    #     ForeignKey("articles.slug"), primary_key=True
+    # )
+    article_id: Mapped[str] = mapped_column(
+        ForeignKey("articles.id"), primary_key=True
     )
     favorited_by_user: Mapped[str] = mapped_column(
         ForeignKey("favorited.username"), primary_key=True
     )
+    # article_id: Mapped[int]
 
-    article_id: Mapped[int]
     favorited: Mapped["Favorited"] = relationship(back_populates="articles")
 
     article: Mapped["Article"] = relationship(back_populates="favorited")
