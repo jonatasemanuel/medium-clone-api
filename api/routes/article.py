@@ -12,7 +12,6 @@ from api.db.models import (
     Favorites,
     Follow,
     PostComment,
-    Tag,
     TagArticle,
     User,
 )
