@@ -1,13 +1,13 @@
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.db.database import get_session
 from api.db.models import TagArticle
 
-router = APIRouter(prefix='/api/tags', tags=['tags'])
+router = APIRouter(prefix='/api/tags', tags=['Tags'])
 Session = Annotated[Session, Depends(get_session)]
 
 

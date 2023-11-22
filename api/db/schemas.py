@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 from api.db.models import Article, User
 
@@ -14,7 +14,7 @@ class CustomBaseModel(BaseModel):
 
 
 class UserSchema(CustomBaseModel):
-    id: int
+    # id: int
     username: str
     email: EmailStr
     password: str

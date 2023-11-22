@@ -18,16 +18,16 @@ from api.db.models import (
 from api.db.schemas import (
     ArticleInput,
     ArticleUpdate,
-    CommentSchema,
     Message,
     MultArticle,
     Profile,
     PublicArticleSchema,
 )
-from api.routes.user import CurrentUser, get_profile
+from api.routes.profile import get_profile
+from api.routes.user import CurrentUser
 from api.security import get_current_user_optional
 
-router = APIRouter(prefix='/api/articles', tags=['articles'])
+router = APIRouter(prefix='/api/articles', tags=['Articles'])
 Session = Annotated[Session, Depends(get_session)]
 
 
@@ -296,84 +296,6 @@ def get_article(slug: str, session: Session):
     return article_response
 
 
-@router.post(
-    '/{slug}/favorite', response_model=PublicArticleSchema, status_code=201
-)
-def favorite_article(session: Session, current_user: CurrentUser, slug: str):
-    article = session.scalar(select(Article).where(Article.slug == slug))
-    if not article:
-        raise HTTPException(status_code=404, detail='Article not exist')
-    article_to_favorite = session.scalar(
-        select(Favorites).where(
-            Favorites.favorited_by_user == current_user.username,
-            Favorites.article_id == article.id,
-        )
-    )
-
-    if article_to_favorite:
-        raise HTTPException(
-            status_code=400, detail='Article already favorited'
-        )
-    favorite: Favorites = Favorites(
-        favorited_by_user=current_user.username,
-        article_id=article.id,
-    )
-
-    session.add(favorite)
-    session.commit()
-    session.refresh(favorite)
-
-    fav_article = get_article(slug, session)
-    fav_article.favorited = True
-
-    user_to_check = session.scalar(
-        select(Follow).where(
-            Follow.following_id == article.user_id,
-            Follow.user_id == current_user.id,
-        )
-    )
-
-    if user_to_check:
-        fav_article.author.following = True
-
-    return fav_article
-
-
-@router.delete(
-    '/{slug}/favorite', response_model=PublicArticleSchema, status_code=201
-)
-def unfavorite_article(session: Session, current_user: CurrentUser, slug: str):
-    article = session.scalar(select(Article).where(Article.slug == slug))
-    if not article:
-        raise HTTPException(status_code=404, detail='Article not exist')
-
-    article_to_unfavorite = session.scalar(
-        select(Favorites).where(
-            Favorites.favorited_by_user == current_user.username,
-            Favorites.article_slug == article.slug,
-        )
-    )
-    if not article_to_unfavorite:
-        raise HTTPException(status_code=400, detail='Article is not favorited')
-
-    session.delete(article_to_unfavorite)
-    session.commit()
-
-    fav_article = get_article(slug, session)
-
-    user_to_check = session.scalar(
-        select(Follow).where(
-            Follow.following_id == article.user_id,
-            Follow.user_id == current_user.id,
-        )
-    )
-
-    if user_to_check:
-        fav_article.author.following = True
-
-    return fav_article
-
-
 @router.patch(
     '/{article_slug}', response_model=PublicArticleSchema, status_code=200
 )
@@ -525,73 +447,3 @@ def delete_article(
     session.commit()
 
     return {'detail': 'Article deleted'}
-
-
-@router.post('/{article_slug}/comments', status_code=201)
-def post_comment(
-    article_slug: str,
-    body: CommentSchema,
-    session: Session,
-    current_user: CurrentUser,
-):
-    db_article = session.scalar(
-        select(Article).where(Article.slug == article_slug)
-    )
-    if db_article is None:
-        raise HTTPException(status_code=404, detail='Article not found')
-
-    comment: Comment = Comment(
-        body=body.body,
-        created_at=func.now(),
-        updated_at=func.now(),
-        author=current_user,
-    )
-    session.add(comment)
-    session.commit()
-
-    post_comment: PostComment = PostComment(
-        article_slug=article_slug,
-        comment_id=comment.id,
-    )
-
-    session.add(post_comment)
-    session.commit()
-
-    return {'comment': comment.body}
-
-
-@router.get('/{slug}/comments', status_code=200)
-def get_comments(slug: str, session: Session, current_user: CurrentUser):
-    db_article = session.scalar(select(Article).where(Article.slug == slug))
-    if db_article is None:
-        raise HTTPException(status_code=404, detail='Article not found')
-
-    comments_article = session.scalars(
-        select(Comment).where(
-            Comment.id == PostComment.comment_id,
-            PostComment.article_slug == slug,
-        )
-    ).all()
-
-    return {'comments': comments_article}
-
-
-@router.delete('/{slug}/comments/{id}', status_code=200)
-def delete_comment(
-    slug: str, id: int, session: Session, current_user: CurrentUser
-):
-    db_article = session.scalar(select(Article).where(Article.slug == slug))
-    if db_article is None:
-        raise HTTPException(status_code=404, detail='Article not found')
-
-    comment_association = session.scalar(
-        select(PostComment).where(PostComment.comment_id == id)
-    )
-    session.delete(comment_association)
-
-    comment_article = session.scalar(select(Comment).where(Comment.id == id))
-
-    session.delete(comment_article)
-    session.commit()
-
-    return {'detail': 'Comment removed'}
